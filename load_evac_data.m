@@ -112,7 +112,11 @@ for i = 1:1:N % iterate over all individuals
         evacTime = Tm(i,j); is0 = 0;
         if isnan(evacTime) % no evacuation; ALL Phits seen until Qm = 1 or 0
             assert(Qm(j,end)==0||Qm(j,end)==1);
-            h1 = histcounts(Qm(j,1:find(Qm(j,:)==Qm(j,end),1,'first')),bins);
+            try h1 = histcounts(Qm(j,1:find(Qm(j,:)==Qm(j,end),1,'first')),bins);
+            catch
+                h1 = histc(Qm(j,1:find(Qm(j,:)==Qm(j,end),1,'first')),bins);
+                h1 = h1(1:end-1);
+            end
 %             if makeFigs
 %               figure(1);hold on;plot(Qm(j,1:find(Qm(j,:)==Qm(j,end),1,'first')));hold off; title('no evac');
 %             end
@@ -130,7 +134,11 @@ for i = 1:1:N % iterate over all individuals
 %                 phe_hit = [phe_hit Qm(j,end)];
 %             end
             assert(Qm(j,evacTime)==Pm(i,j));
-            h1 = histcounts(Qm(j,1:evacTime),bins);
+            try h1 = histcounts(Qm(j,1:evacTime),bins);
+            catch
+                h1 = histc(Qm(j,1:evacTime),bins);
+                h1 = h1(1:end-1);
+            end
 %             if makeFigs
 %               figure(2);hold on;plot(Qm(j,1:evacTime+1));hold off; title('evac');
 %             end
@@ -150,8 +158,13 @@ end
 % This is the total amount of times each individual evacuated in a
 % specified range of phit values.
 TotalPhitEvac = zeros(N,length(bins)-1);
-for i = 1:1:N % iterate over all individials
-    TotalPhitEvac(i,:) = TotalPhitEvac(i,:) + histcounts(Pm(i,:),bins);
+try
+    for i = 1:1:N % iterate over all individials
+        TotalPhitEvac(i,:) = TotalPhitEvac(i,:) + histcounts(Pm(i,:),bins);
+    end
+catch
+    TotalPhitEvac = histc(Pm,bins,2);
+    TotalPhitEvac = TotalPhitEvac(:,1:end-1);
 end
 
 % This is the probability for each individual to evacuate in the specified

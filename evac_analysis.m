@@ -555,10 +555,19 @@ n = params(3);
 qhill = @(Phit_,L_,k_,n_) L_.*(Phit_.^n_)./(k_.^n_+Phit_.^n_);
 Phit = 0:0.1:1;
 q = @(Phit_) qhill(Phit_,L,k,n);
-[Ti, Pi] = solve_master_binom(N,q,Q1(tr,:),Phit);
+%[Ti, Pi] = solve_master_binom(N,q,Q1(tr,:),Phit);
 Pgrp = Pi*Ptrans';
 
 
 
 % next we try to 
 
+%%  Bayesian learner that takes into acccount..........
+%   the shelter space and others' decisions.
+%   we need to formulate the likelihood function of getting the highest
+%   score, GIVEN shelter space, Phit trajectory, and decision model.
+%
+%   if EVERYONE has model q(L,k,n) and ss=25... the probability of
+%   successfully evacuating at timestep t = probability of personal decision
+%   to evacuate * probability of shelter space being open = probability of
+%   personal decision to evacuate * 
