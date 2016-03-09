@@ -1,1 +1,0 @@
-function [q_neq,q_eq] = q_add_eq(q_con)
