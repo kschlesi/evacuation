@@ -32,7 +32,7 @@ end
 grpEvac = sort(grpEvac);
 C = sort(C).*numel(find(grpIDs(px,:)==grp));
 
-if nargin<2
+if nargin<2 %% nargout?
     Cbin = [];
 else
     Cbin = histc(grpEvac,tbins);

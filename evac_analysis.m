@@ -12,39 +12,45 @@ trials = [19,28,29,49,64,67,76,102,108,112,113,123,125,130,143,144];
 %H = H(:,2:end); J = J(:,2:end);
 %% we can (a) fit experimental data to a particular q function 
 % with maximum likelihood estimation
-qhill = @(Phit_,L_,k_,n_) L_.*(Phit_.^n_)./(k_.^n_+Phit_.^n_);
-Phit = 0:0.1:1; %Phit = Phit(2:end);
-qfit = @(L_,k_,n_) qhill(Phit(:,2:end),L_,k_,n_);
-MLfit = @(pvec) -1*sum(((sum(H(:,2:end))-sum(J(:,2:end))).*log(1-qfit(pvec(1),pvec(2),pvec(3))) + sum(J(:,2:end)).*log(qfit(pvec(1),pvec(2),pvec(3)))));
-%MLfitC = @(pvec) -1*sum(((cumuH(2:end)'-cumuJ(2:end)').*log(1-qfit(pvec(1),pvec(2),pvec(3))) + cumuJ(2:end)'.*log(qfit(pvec(1),pvec(2),pvec(3)))));
-startp = [1;0.5;10];
+% qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
+% Phit = 0:0.1:1;
+% qfit = @(pv_) qform(Phit(:,2:end),pv_);
+% MLfit = @(pvec) -1*sum(((sum(H(:,2:end))-sum(J(:,2:end))).*log(1-qfit(pvec)) + sum(J(:,2:end)).*log(qfit(pvec))));
+% startp = [1;0.5;10];
+qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
+Phit = 0:0.1:1;
+qfit = @(pv_) qform(Phit(:,2:end-1),pv_);
+MLfit = @(pvec_) -1*sum(((sum(H(:,2:end-1))-sum(J(:,2:end-1))).*log(1-qfit(pvec_)) + sum(J(:,2:end-1)).*log(qfit(pvec_))));
+startp = [1.1;1];
 options = optimoptions(@fminunc,'MaxFunEvals',10000);
 [params1,MLval] = fminunc(MLfit,startp,options);
 A = zeros(length(startp));
-b = [0 0 0];
+b = zeros(length(startp),1);
 % constrains all prob. as a function of Phit to be <=1
-q_con = @(pvec_)(qhill(Phit,pvec_(1),pvec_(2),pvec_(3))-1); 
+q_con = @(pvec_)(qform(Phit,pvec_)-1); 
 [theta_con,MLval_con] = fmincon(MLfit,startp,A,b,A,b,0,100,@(pvec_)q_add_eq(pvec_,q_con));
 
 
-if MLval<MLval_con || all(qhill(Phit,params1(1),params(2),params(3))<=1)
+if MLval<MLval_con && all(qform(0:0.1:1,params1)<=1)
     params = params1;
 else
     params = theta_con;
 end
 
-figure; plot(Phit(2:end),qfit(params(1),params(2),params(3))); hold on;
-legend(['\Lambda = ' num2str(params(1)) ', k = ' num2str(params(2)) ', n = ' num2str(params(3))]);
+figure(1); hold all; plot(Phit,qform(Phit,params));
 xlabel('Phit'); ylabel('evacuation probability'); title('best-fit hill model, ind. trials, shelterSpace=50');
-        
+%legend(['\Lambda = ' num2str(params(1)) ', k = ' num2str(params(2)) ', n = ' num2str(params(3))]);
+%legend(['\alpha = ' num2str(params(1)) ', \beta = ' num2str(params(2))]);
+hold off;
+
 %% we can (b) solve the master equation for a given trial and q function
 %for tr=trials
 tr=19;
-L = params(1);
-k = params(2);
-n = params(3);
+%L = params(1);
+%k = params(2);
+%n = params(3);
 Phit = 0:0.1:1;
-q = @(Phit_) qhill(Phit_,L,k,n);
+q = @(Phit_) qform(Phit_,params);
 [T, P] = solve_master_binom(N,q,Q1(tr,:),Phit);
 figure; subplot(1,3,1);
         bcolor(P',T,0:1:N); colorbar; hold on;
@@ -65,10 +71,10 @@ figure; subplot(1,3,1);
 for tr=trials
 %tr = 29; 
 nS = 10;
-L = params(1);
-k = params(2);
-n = params(3);
-q = @(Phit_) qhill(Phit_,L,k,n);
+%L = params(1);
+%k = params(2);
+%n = params(3);
+q = @(Phit_) qform(Phit_,params);
 A = makeA(N,q(Phit));
 tbins = 0:1:60;
 % for below, theta_ is a cell array s.t. theta_{1} = A_ and theta_{2} = Phit_traj_
@@ -105,13 +111,13 @@ end  % end loop over trials
 % ^^^ DONE (SEE gillespie_tdep.m)
 tr = 112;
 nS_ind = 100;
-L = params(1);
-k = params(2);
-n = params(3);
+%L = params(1);
+%k = params(2);
+%n = params(3);
 tbins = 0:1:60;
 P0_ind = 0;            % initial value of "evacuated" state
 t0 = 0; T = 60;        % starting time and duration of simulation
-q_ind = @(Phit_) qhill(Phit_,L,k,n);
+q_ind = @(Phit_) qform(Phit_,params);
 % propensity for individual evacuation
 a_ind = @(t_,P_,theta_ind_) theta_ind_{1}(floor(theta_ind_{2}(floor(t_)+1)*10)/10)*(1-P_); % there is only one reaction: evacuation
 % theta_ind is a cell array such that entry {1} is the fcn q_ind(Phit_)
@@ -135,11 +141,11 @@ nu_ind = 1;
 
 % for each trial, solve master equation for 1 individual (2 states)
 tr = 19;
-L = params(1);
-k = params(2);
-n = params(3);
+%L = params(1);
+%k = params(2);
+%n = params(3);
 Phit = 0:0.1:1;
-q = @(Phit_) qhill(Phit_,L,k,n);
+q = @(Phit_) qform(Phit_,params);
 [T, P] = solve_master_binom(1,q,Q1(tr,:),Phit);
 
 figure; plot(T,P(:,end)'); hold on; 
@@ -154,94 +160,97 @@ lossmat = @(didHit,didEvac) 10*(didHit.*~didEvac) + ...
                              6*(didHit.*didEvac) + ...
                              0*(~didHit.*~didEvac) + ...
                              2*(~didHit.*didEvac) ;
-qhill = @(Phit_,L_,k_,n_) L_.*(Phit_.^n_)./(k_.^n_+Phit_.^n_);
+%qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
+qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
 Phit = 0:0.1:1; %Phit = Phit(2:end);
 % for a single trial: as an example
 ptry = params;
-scr = exp_score(qhill,ptry,Phit,Q1(tr,:),lossmat);
+scr = exp_score(qform,ptry,Phit,Q1(tr,:),lossmat);
 
 % for all trials:
-[tscr,scrs] = total_score(qhill,ptry,Phit,trials,Q1,lossmat);
+[tscr,scrs] = total_score(qform,ptry,Phit,trials,Q1,lossmat);
 
 % doing the fit:
 %startp = params;
 %startp = sopt_params_con;
-startp = [Lrange(Lix),krange(kix),nrange(nix)];
-SFit = @(ptry_) -1*total_score(qhill,ptry_,Phit,trials,Q1,lossmat);
+startp = index_each_cell(prange,optix);
+assert(size(startp,1)==1);
+SFit = @(ptry_) -1*total_score(qform,ptry_,Phit,trials,Q1,lossmat);
 %options = optimoptions(@fminunc,'MaxFunEvals',10000);
 %[sopt_params,sopt_score] = fminunc(SFit,startp,options);
 A = zeros(length(startp));
-b = [0 0 0];
+b = zeros(length(startp),1);
 % constrains all prob. as a function of Phit to be <=1
-q_con = @(pvec_)(qhill(Phit,pvec_(1),pvec_(2),pvec_(3))-1); 
+q_con = @(pvec_)(qform(Phit,pvec_)-1);
 [sopt_params_con,sopt_score_con] = fmincon(SFit,startp,A,b,A,b,0,100,@(pvec_)q_add_eq(pvec_,q_con));
 %params = sopt_params;
 
 % ok, mapping over the range:
-Lrange = linspace(0.6,2,5);
-krange = linspace(0.6,1.1,5);
-nrange = linspace(5,35,8);
-scoremat = zeros(numel(Lrange),numel(krange),numel(nrange));
+prange = cell(numel(params),1);
+prange{1} = linspace(0.6,2,5);
+prange{2} = linspace(0.6,1.1,5);
+prange{3} = linspace(5,35,8);
+psize = cellfun(@numel,prange)';
+scoremat = zeros(psize);
 tic;
-for L=Lrange
-  for k=krange
-    for n=nrange
-      if any(q_con([L,k,n])>0)
-          scoremat(Lrange==L,krange==k,nrange==n) = NaN;
+for px = 1:numel(scoremat)
+      pix = ind2sub_var_dim(size(scoremat),px);
+      par = index_each_cell(prange,pix);
+      if any(q_con(par)>0)
+          scoremat(px) = NaN;
       else
-          scoremat(Lrange==L,krange==k,nrange==n) = SFit([L,k,n]);
+          scoremat(px) = SFit(par);
       end
-    end
-  end
 end
 toc; % about 47 sec for 200 points
-best = min(min(min(scoremat)));
+best = min(scoremat(:));
 allscores = unique(scoremat);
-[Lix,kix,nix] = ind2sub(size(scoremat),find(scoremat==best));
-[Lix2,kix2,nix2] = ind2sub(size(scoremat),find((scoremat>allscores(1)).*(scoremat<allscores(15))));
-[Lix3,kix3,nix3] = ind2sub(size(scoremat),find((scoremat>=allscores(15)).*(scoremat<allscores(35))));
-[Lix4,kix4,nix4] = ind2sub(size(scoremat),find((scoremat>=allscores(35)).*(scoremat<allscores(55))));
-[Lix5,kix5,nix5] = ind2sub(size(scoremat),find((scoremat>=allscores(55)).*(scoremat<allscores(75))));
+%%%%%%%%%%%%%%% stop here
+optix = ind2sub_var_dim(size(scoremat),find(scoremat==best));
+optix2 = ind2sub_var_dim(size(scoremat),find((scoremat>allscores(1)).*(scoremat<=allscores(2))));
+optix3 = ind2sub_var_dim(size(scoremat),find((scoremat>=allscores(15)).*(scoremat<allscores(35))));
+optix4 = ind2sub_var_dim(size(scoremat),find((scoremat>=allscores(35)).*(scoremat<allscores(55))));
+optix5 = ind2sub_var_dim(size(scoremat),find((scoremat>=allscores(55)).*(scoremat<allscores(75))));
 % plot figures of all scores and max scores
-figure; scatter3(Lrange(Lix),krange(kix),nrange(nix),'r'); hold on;
-        scatter3(Lrange(Lix2),krange(kix2),nrange(nix2),'b');
-        scatter3(Lrange(Lix3),krange(kix3),nrange(nix3),'k');
-        scatter3(Lrange(Lix4),krange(kix4),nrange(nix4),'g');
-        scatter3(Lrange(Lix5),krange(kix5),nrange(nix5),'y');
-        title('best score parameters');
-        xlabel('L'); ylabel('k'); zlabel('n');
-        set(gca,'XTick',Lrange,'YTick',krange,'ZTick',nrange);
-        axis([Lrange(1),Lrange(end),krange(1),krange(end),nrange(1),nrange(end)])
-        legend([num2str(best) ', max score'],num2str(allscores(15)),...
-                            num2str(allscores(35)),num2str(allscores(55)),...
-                            num2str(allscores(75)),'location','northeast');
+% index_each_cell(prange,optix2)
+% figure; scatter3(index_each_cell(prange,optix))%,'r'); hold on;
+%         scatter3(index_each_cell(prange,optix2),'b');
+%         scatter3(Lrange(Lix3),krange(kix3),nrange(nix3),'k');
+%         scatter3(Lrange(Lix4),krange(kix4),nrange(nix4),'g');
+%         scatter3(Lrange(Lix5),krange(kix5),nrange(nix5),'y');
+%         title('best score parameters');
+%         xlabel('L'); ylabel('k'); zlabel('n');
+%         set(gca,'XTick',Lrange,'YTick',krange,'ZTick',nrange);
+%         axis([Lrange(1),Lrange(end),krange(1),krange(end),nrange(1),nrange(end)])
+%         legend([num2str(best) ', max score'],num2str(allscores(15)),...
+%                             num2str(allscores(35)),num2str(allscores(55)),...
+%                             num2str(allscores(75)),'location','northeast');
         
 % what were the mistakes on optimal scores?
-bx = [Lix,kix,nix];
-all_opt = zeros(size(bx,1),numel(trials));
-for i=1:size(bx,1)
-    sumall = scoremat(bx(i,1),bx(i,2),bx(i,3));
-    ptry = [Lrange(bx(i,1)),krange(bx(i,2)),nrange(bx(i,3))];
-    [~,all] = total_score(qhill,ptry,Phit,trials,Q1,lossmat);
+all_opt = zeros(size(optix,1),numel(trials));
+for i=1:size(optix,1)
+    sumall = scoremat(optix(i,:));
+    ptry = index_each_cell(prange,optix(i,:));
+    [~,all] = total_score(qform,ptry,Phit,trials,Q1,lossmat);
     all_opt(i,:) = all;
 end
 figure; bcolor([Q1(trials,end)';all_opt]); colorbar;
 
 % plot maximum score found by mesh search of param space
 figure;
-%leg = cell(size(bx,1),1);
-%for i=1:size(bx,1)
-leg = cell(numel(find(krange(bx(:,2))~=0)),1);
-for i = find(krange(bx(:,2))~=0)
-    plot(Phit,qhill(Phit,Lrange(bx(i,1)),krange(bx(i,2)),nrange(bx(i,3)))); hold all; 
-    leg{find(krange(bx(:,2))~=0)==i} = ['\Lambda = ' num2str(Lrange(bx(i,1))) ', k = ' num2str(krange(bx(i,2))) ', n = ' num2str(nrange(bx(i,3)))];
+leg = cell(size(optix,1),1);
+for i=1:size(optix,1)
+%for i = find(krange(bx(:,2))~=0)
+    plot(Phit,qform(Phit,index_each_cell(prange,optix(i,:)))); hold all; 
+    %leg{find(krange(bx(:,2))~=0)==i} = ['\Lambda = ' num2str(Lrange(bx(i,1))) ', k = ' num2str(krange(bx(i,2))) ', n = ' num2str(nrange(bx(i,3)))];
+    leg{i} = ['\Lambda = ' num2str(prange{1}(optix(i,1))) ', k = ' num2str(prange{2}(optix(i,2))) ', n = ' num2str(prange{3}(optix(i,3)))];
 end
 xlabel('Phit'); ylabel('Evacuation Probability'); legend(leg,'location','northwest');
-title(['Static Optimal Evacuation Strategy (Hill Model), <score> = ' num2str(scoremat(Lix,kix,nix))]);
+title(['Static Optimal Evacuation Strategy (Hill Model), <score> = ' num2str(best)]);
 
 % plot maximum score found overall
 figure;
-    plot(Phit,qhill(Phit,sopt_params_con(1),sopt_params_con(2),sopt_params_con(3))); hold all; 
+    plot(Phit,qform(Phit,[sopt_params_con(1),sopt_params_con(2),sopt_params_con(3)])); hold all; 
     leg = ['\Lambda = ' num2str(sopt_params_con(1)) ', k = ' num2str(sopt_params_con(2)) ', n = ' num2str(sopt_params_con(3))];
 xlabel('Phit'); ylabel('Evacuation Probability'); legend(leg,'location','northwest');
 title(['Static Optimal Evacuation Strategy (Hill Model), <score> = ' num2str(sopt_score_con)]);
@@ -289,7 +298,8 @@ n_max_strategy(1) = nn*nk*nL-n_con;     % init: all valid strategies optimal
 % iterate through each trial and update posterior prob of max score
 for tr = trials
 disp(['trial ' num2str(tr) ', ' num2str(find(trials==tr)) ' of ' num2str(numel(trials))]);
-didHit = Q1(tr,end);    
+didHit = Q1(tr,end);
+ss = N;
 tic;
 L_maxscore = zeros(nL,nk,nn);           % likelihood of achieving max score
 for L=Lrange
@@ -348,6 +358,21 @@ end
 xlabel('Phit'); ylabel('evacuation prob'); title('Bayesian strategy evolution');
 legend(leg,'location','northwest'); 
 
+chg = find(sum(diff(strategies),2))+1;
+for i=chg'
+    figure(1); hold on;
+    colorval = find(chg==i)/numel(chg);
+    plot(Q1(i-1,:),'--','Color',[0,colorval,colorval]);
+    title('trials preceding changes to Bayesian optimal strategy');
+    hold off;
+end
+for i=1:48
+    figure(2); hold on;
+    colorval = i/48;
+    plot(Q1(i,:),'--','Color',[0,colorval,colorval]);
+    title('all unique trials');
+    hold off;
+end
 
 %%%% to do still: make plots of highest probability areas over time
 
@@ -356,9 +381,10 @@ lossmat = @(didHit,didEvac) 10*(didHit.*~didEvac) + ...
                              6*(didHit.*didEvac) + ...
                              0*(~didHit.*~didEvac) + ...
                              2*(~didHit.*didEvac) ;
-qhill = @(Phit_,L_,k_,n_) L_.*(Phit_.^n_)./(k_.^n_+Phit_.^n_);
+%qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
+qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
 Phit = 0:0.1:1; 
-q_con = @(pvec_)(qhill(Phit,pvec_(1),pvec_(2),pvec_(3))-1); % constraint: q_con<=0
+q_con = @(pvec_)(qform(Phit,pvec_)-1); % constraint: q_con<=0
 
 %%%%individual Bayesian player:
 all_scr = zeros(numel(trials),1);
@@ -369,7 +395,7 @@ while any(q_con(ptry)>0) % reject if strategy gives prob > 1
 end
 for tr = trials
     % play trial
-    all_scr(trials==tr) = exp_score(qhill,ptry,Phit,Q1(tr,:),lossmat);
+    all_scr(trials==tr) = exp_score(qform,ptry,Phit,Q1(tr,:),lossmat);
     % update strategy
     ptry = [Lt(trials==tr),kt(trials==tr),nt(trials==tr)];
 end
@@ -391,7 +417,7 @@ plot_trials = removeval(trials,missing);
 
 % solve 'static optimal' for comparison
 load('score_min_tryALL_cons1.mat');
-q_sopt = @(Phit_) qhill(Phit_,sopt_params_con(1),sopt_params_con(2),sopt_params_con(3));
+q_sopt = @(Phit_) qform(Phit_,[sopt_params_con(1),sopt_params_con(2),sopt_params_con(3)]);
 
 % choose random starting strategy from flat prior
 ptry = [Lrange(randi(length(Lrange))),krange(randi(length(krange))),nrange(randi(length(nrange)))];
@@ -399,10 +425,10 @@ while any(q_con(ptry)>0) % reject if strategy gives prob > 1
     ptry = [Lrange(randi(length(Lrange))),krange(randi(length(krange))),nrange(randi(length(nrange)))];
 end
 for tr=trials'
-    qb = @(Phit_) qhill(Phit_,ptry(1),ptry(2),ptry(3));
+    qb = @(Phit_) qform(Phit_,ptry);
     [T, P] = solve_master_binom(N,qb,Q1(tr,:),Phit);
     Cexp = sum(bsxfun(@times,P,0:1:N),2);
-    q = @(Phit_) qhill(Phit_,params(1),params(2),params(3));
+    q = @(Phit_) qform(Phit_,params);
     [Tfit,Pfit] = solve_master_binom(N,q,Q1(tr,:),Phit);
     [Tso,Pso] = solve_master_binom(N,q_sopt,Q1(tr,:),Phit);
     C1exp = sum(bsxfun(@times,Pso,0:1:N),2);
@@ -458,16 +484,22 @@ p = 100;  % number of times to simulate
 
 % train model on individual trials (output 'params')
 trials = trial_ix('ind',shelterSpace,1,missing);
-bins = -0.05:0.1:1.05; [H,J] = load_evac_data(0,trials,bins);
-qhill = @(Phit_,L_,k_,n_) L_.*(Phit_.^n_)./(k_.^n_+Phit_.^n_);
-Phit = 0:0.1:1; qfit = @(L_,k_,n_) qhill(Phit(:,2:end),L_,k_,n_);
-MLfit = @(pvec) -1*sum(((sum(H(:,2:end))-sum(J(:,2:end))).*log(1-qfit(pvec(1),pvec(2),pvec(3))) + sum(J(:,2:end)).*log(qfit(pvec(1),pvec(2),pvec(3)))));
-startp = [1;0.5;10];
+bins = -0.05:0.1:1.05; [H,J,~,~,~,Q1] = load_evac_data(0,trials,bins); nts = size(Q1,2);
+% qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
+% Phit = 0:0.1:1;
+% qfit = @(pv_) qform(Phit(:,2:end),pv_);
+% MLfit = @(pvec) -1*sum(((sum(H(:,2:end))-sum(J(:,2:end))).*log(1-qfit(pvec)) + sum(J(:,2:end)).*log(qfit(pvec))));
+% startp = [1;0.5;10];
+qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
+Phit = 0:0.1:1;
+qfit = @(pv_) qform(Phit(:,2:end-1),pv_);
+MLfit = @(pvec_) -1*sum(((sum(H(:,2:end-1))-sum(J(:,2:end-1))).*log(1-qfit(pvec_)) + sum(J(:,2:end-1)).*log(qfit(pvec_))));
+startp = [1.1;1];
 options = optimoptions(@fminunc,'MaxFunEvals',10000);
 [params1,MLval] = fminunc(MLfit,startp,options);
-A = zeros(length(startp)); b = [0 0 0]; q_con = @(pvec_)(qhill(Phit,pvec_(1),pvec_(2),pvec_(3))-1); 
+A = zeros(length(startp)); b = zeros(1,length(startp)); q_con = @(pvec_)(qform(Phit,pvec_)-1); 
 [theta_con,MLval_con] = fmincon(MLfit,startp,A,b,A,b,0,100,@(pvec_)q_add_eq(pvec_,q_con));
-if MLval<MLval_con || all(qhill(Phit,params1(1),params(2),params(3))<=1)
+if MLval<MLval_con && all(qform(Phit,params1)<=1)
     params = params1;
 else
     params = theta_con;
@@ -475,10 +507,16 @@ end
 
 % choose trials to predict
 trials = trial_ix(groupProtocol,shelterSpace,groupSize,missing);
+trEnd = zeros(1,size(Q1,1)); % we will store the time at which the trials ended
+for j = 1:size(Q1,1) % iterate through each trial
+    trEnd(j) = find(Q1(j,:)==Q1(j,end),1,'first');
+end
+nevac_b = zeros(numel(trials),1);
+nevac_t = zeros(numel(trials),nts);
 for tr = trials(:)'
     % randomly generate N individual evac times, p simulations
     % for comments see similar section above
-    q = @(Phit_) qhill(Phit_,params(1),params(2),params(3));
+    q = @(Phit_) qform(Phit_,params);
     tbins = 0:1:60;
     a = @(t_,P_,theta_) a_vec(t_,P_,theta_{1},theta_{2}); % this returns a prop. vector of only lower-triangular vals
     aix = tril(ones(N+1),-1);  % indices of lower-triangular entries
@@ -526,8 +564,67 @@ for tr = trials(:)'
                    groupProtocol,...%'individual',
                    'location','northwest');
             xlabel('time'); ylabel('cumulative no. evacuated');
-end
+    
+    % for each relevant trial, compute nevac_b and nevac(t)
+    nevac_t(trials==tr,1:trEnd(tr)) = mean(Cbin(2:trEnd(tr)+1,:),2)' - C1(tr,1:trEnd(tr));
+    nevac_b(trials==tr) = mean(Cbin(trEnd(tr)+1,:)) - C1(tr,end);            
+            
+end  % end loop over trials
 
+% plot nevac_b for each game
+horm = Q1(:,end);
+hits = NaN*zeros(numel(trials),1); misses = hits;
+hits(~~horm(trials)) = nevac_b(~~horm(trials)); 
+misses(~horm(trials)) = nevac_b(~horm(trials));
+figure; plot(nevac_b); hold on; 
+        plot(zeros(numel(trials),1),'--k');
+        plot(hits,'or'); plot(misses,'ok');
+        xlabel('trial number'); set(gca,'XTickLabel',trials);
+        ylabel('error in total number evacuated');
+        title(['number evacuated prediction error, ' groupProtocol ', ss=' ...
+               num2str(shelterSpace) ', grp=' num2str(groupSize)]);
+           
+% save from several groupProtocols with...
+nevac_t_fTG_50_5 = nevac_t; 
+nevac_b_fTG_50_5 = nevac_b;
+nevac_t_lTG_50_5 = nevac_t;
+nevac_b_lTG_50_5 = nevac_b;
+nevac_t_mR_50_5 = nevac_t;
+nevac_b_mR_50_5 = nevac_b;
+
+% plot & compare
+figure;
+for gP = 3
+    switch gP
+        case 1, toPlot = nevac_t_fTG_50_5;
+                mean_abs_b(1,1) = mean(abs(nevac_b_fTG_50_5));
+                mean_abs_b(2,1) = mean(mean(abs(nevac_t_fTG_50_5)));
+                plot(1:60,toPlot',':b'); hold on;
+                plot(1:60,mean(toPlot),'-b');
+        case 2, toPlot = nevac_t_lTG_50_5;
+                mean_abs_b(1,2) = mean(abs(nevac_b_lTG_50_5));
+                mean_abs_b(2,2) = mean(mean(abs(nevac_t_lTG_50_5)));
+                plot(1:60,toPlot',':m'); hold on;
+                plot(1:60,mean(toPlot),'-m');
+        case 3, toPlot = nevac_t_mR_50_5;
+                mean_abs_b(1,3) = mean(abs(nevac_b_mR_50_5));
+                mean_abs_b(2,3) = mean(mean(abs(nevac_t_mR_50_5)));
+                plot(1:60,toPlot'); hold on;
+                plot(1:60,toPlot'); hold on;
+                plot(1:60,toPlot,'-');
+    end
+end
+title(['number evacuated prediction error, ss=' ...
+               num2str(shelterSpace) ', grp=' num2str(groupSize)]);
+xlabel('time'); ylabel('number evacuated error');
+%legend('fTG','lTG','mR');
+
+figure; bar(mean_abs_b');
+        xlabel('group protocol'); set(gca,'XTickLabel',{'fTG';'lTG';'mR'});
+        ylabel('mean absolute error');
+        title(['total evacuations, mean absolute prediction error, ss=' ...
+               num2str(shelterSpace) ', grp=' num2str(groupSize)]);
+        legend('trial end error','mean over timesteps');
 %% Making an analytical model for group protocol master equation
 % we must translate individual probabilities to group ones.
 % at any given time t, we have the individual-state prob. P[n,t] that n
@@ -549,10 +646,8 @@ end
 tic;
 Ptrans = grp_trans(N,Gs,groupProtocol);
 toc;
-L = params(1);
-k = params(2);
-n = params(3);
-qhill = @(Phit_,L_,k_,n_) L_.*(Phit_.^n_)./(k_.^n_+Phit_.^n_);
+qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
+%qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
 Phit = 0:0.1:1;
 q = @(Phit_) qhill(Phit_,L,k,n);
 [Ti, Pi] = solve_master_binom(N,q,Q1(tr,:),Phit);

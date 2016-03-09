@@ -78,7 +78,7 @@ catch err
 end
 try assert(~any(ismember(indx,missing)))
 catch err
-    error('Missing trials requested!');
+    warning('Missing trials requested!');
 end
 
 % ############################################################################################################%
