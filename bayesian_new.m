@@ -240,53 +240,13 @@ end  % end loop over ss
 
 %save('bayesian_pl_ss_ind_fine.mat','A');
 
-%% combine things....
-for blah=blah1
-    load('bayesian_ss5_ind.mat'); Ass5 = A;
-    load('bayesian_ss25_ind.mat'); Ass25 = A;
-    load('bayesian_ss50_ind.mat'); Ass50 = A;
-
-    % check -- are 5s (and 50s) the same?
-    load('bayesian_ssALL5_ind.mat');
-    assert(all(A==Ass5));
-
-    % make one large A and save
-    A = struct('posteriors',cell(numel(ss_list),1),...
-               'param_space',cell(numel(ss_list),1),...
-               'norm_max_posterior',cell(numel(ss_list),1),...
-               'n_opt_strategies',cell(numel(ss_list),1),...
-               'opt_params',cell(numel(ss_list),1),...
-               'opt_strategies',cell(numel(ss_list),1)...
-               );
-    A(1).posteriors = Ass5.posteriors;
-    A(1).param_space = Ass5.param_space;
-    A(1).norm_max_posterior = Ass5.norm_max_posterior;
-    A(1).n_opt_strategies = Ass5.n_opt_strategies;
-    A(1).opt_params = Ass5.opt_params;
-    A(1).opt_strategies = Ass5.opt_strategies;
-
-    A(2).posteriors = Ass25.posteriors;
-    A(2).param_space = Ass25.param_space;
-    A(2).norm_max_posterior = Ass25.norm_max_posterior;
-    A(2).n_opt_strategies = Ass25.n_opt_strategies;
-    A(2).opt_params = Ass25.opt_params;
-    A(2).opt_strategies = Ass25.opt_strategies;
-
-    A(3).posteriors = Ass50.posteriors;
-    A(3).param_space = Ass50.param_space;
-    A(3).norm_max_posterior = Ass50.norm_max_posterior;
-    A(3).n_opt_strategies = Ass50.n_opt_strategies;
-    A(3).opt_params = Ass50.opt_params;
-    A(3).opt_strategies = Ass50.opt_strategies;
-
-    %save('bayesian_ssALL_ind.mat','A');
-end
 %% what would the Bayesian player score on entire game?
 lossmat = @(didHit_,didEvac_) 10*(didHit_.*~didEvac_) + ...
                              6*(didHit_.*didEvac_) + ...
                              0*(~didHit_.*~didEvac_) + ...
                              2*(~didHit_.*didEvac_) ;
-qhill = @(Phit_,L_,k_,n_) L_.*(Phit_.^n_)./(k_.^n_+Phit_.^n_);
+qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
+%qform = @(Phit_,L_,k_,n_) L_.*(Phit_.^n_)./(k_.^n_+Phit_.^n_);
 Phit = 0:0.1:1; 
 q_con = @(pvec_)(qform(Phit,pvec_)-1); % constraint: q_con<=0
 all_ss = zeros(numel(trials),1); ss_ix = zeros(numel(trials),1);
@@ -294,25 +254,30 @@ for tr=trials
     [~,all_ss(tr)] = trial_ix(tr);       % set shelter space capacity
 end
 ss_ix(all_ss==5) = 1; ss_ix(all_ss==25) = 2; ss_ix(all_ss==50) = 3;
-load('bayesian_ss_ind.mat');
+load('bayesian_pl_ss_ind_fine.mat');
 
 %%%%individual Bayesian player:
 all_scr = zeros(numel(trials),1);
 all_pEvac = zeros(numel(trials),1);
 % choose random strategy to start
-ptry = [Lrange(randi(length(Lrange))),krange(randi(length(krange))),nrange(randi(length(nrange)))];
+pxtry = num2cell(cellfun(@randi,num2cell(psize)));
+ptry = index_each_cell(prange,pxtry);
 while any(q_con(ptry)>0) % reject if strategy gives prob > 1
-    ptry = [Lrange(randi(length(Lrange))),krange(randi(length(krange))),nrange(randi(length(nrange)))];
+    pxtry = num2cell(cellfun(@randi,num2cell(psize)));
+    ptry = index_each_cell(prange,pxtry);
 end
 for tr = trials
-    % play trial
+    % play trial tr
     didHit = Q1(tr,end);
-    posts = A(ss_ix(tr)).posteriors(Lrange==ptry(1),krange==ptry(2),nrange==ptry(3),tr:tr+1);
+    posts = A(ss_ix(tr)).posteriors(tr:tr+1,pxtry{:});
     pEvac = posts(2)/posts(1); if ~didHit; pEvac = 1-pEvac; end;
     all_scr(trials==tr) = -1*(lossmat(didHit,1)*pEvac + lossmat(didHit,0)*(1-pEvac));
     all_pEvac(trials==tr) = pEvac;
-    % update strategy
-    ptry = [Lt(trials==tr),kt(trials==tr),nt(trials==tr)];
+    if tr<trials(end)
+      % update strategy for next trial tr+1
+      ptry = A(ss_ix(tr+1)).opt_params(tr,1:end-1);
+      pxtry = num2cell(find_each_cell(prange,ptry));
+    end
 end
 
 % bayesian expected losses per game
