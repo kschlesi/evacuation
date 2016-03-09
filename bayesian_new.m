@@ -19,7 +19,8 @@ lossmat = @(didHit_,didEvac_) 10*(didHit_.*~didEvac_) + ...
                              2*(~didHit_.*didEvac_) ;
                          
 % decision model, fcn of Phit and parameters to fit
-qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
+params = [1.0000;6.6423];                   % best fit params for powerlaw
+qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2); % functional form of powerlaw
 % qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
 Phit = 0:0.1:1; % list of Phits at which q will be evaluated
 q_con = @(pvec_)(qform(Phit,pvec_)-1); % constraint: q_con<=0
@@ -105,10 +106,10 @@ end
 
 % save Bayesian result
 A.posteriors = prob;
-A.param_space = {Lrange,krange,nrange};
+A.param_space = prange;
 A.norm_max_posterior = maxprob;
 A.n_opt_strategies = n_max_strategy;
-A.opt_params = [Lt,kt,nt,trt];
+A.opt_params = opt_params;
 A.opt_strategies = strategies;
   
 save('bayesian_pl_ss50_ind_fine.mat','A');
