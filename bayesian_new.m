@@ -8,113 +8,110 @@ trials = 1:160;
 [ntrials,nts] = size(Q1);
 [N,~] = size(P1);
 
-% %% Next, create simple Bayesian learner.
-% % this updates in the order that trials were presented. use ALL trials.
-% trials = 1:1:ntrials; trials = trials(:)';
-% 
-% % loss matrix used to evaluate strategies
-% lossmat = @(didHit_,didEvac_) 10*(didHit_.*~didEvac_) + ...
-%                              6*(didHit_.*didEvac_) + ...
-%                              0*(~didHit_.*~didEvac_) + ...
-%                              2*(~didHit_.*didEvac_) ;
-%                          
-% % decision model, fcn of Phit and parameters to fit
-% qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
-% % qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
-% Phit = 0:0.1:1; % list of Phits at which q will be evaluated
-% q_con = @(pvec_)(qform(Phit,pvec_)-1); % constraint: q_con<=0
-% 
-% % set search area of parameter space
-% Lrange = linspace(0.6,2,5); nL = numel(Lrange);
-% krange = linspace(0.6,1.1,5); nk = numel(krange);
-% nrange = linspace(5,35,8); nn = numel(nrange);
-% 
-% ss_list=1;
-% A = struct('posteriors',cell(numel(ss_list),1),...
-%            'param_space',cell(numel(ss_list),1),...
-%            'norm_max_posterior',cell(numel(ss_list),1),...
-%            'n_opt_strategies',cell(numel(ss_list),1),...
-%            'opt_params',cell(numel(ss_list),1),...
-%            'opt_strategies',cell(numel(ss_list),1)...
-%            );
-% 
-% % initialize matrices (normalizing 'prob' happens later)
-% prob = zeros(nL,nk,nn,numel(trials)+1); % posterior probs at each timestep
-% maxprob = zeros(numel(trials)+1,1);     % maximum normalized posterior prob
-% n_max_strategy = zeros(numel(trials)+1,1); % number of optimal strategies
-% prob(:,:,:,1) = ones(nL,nk,nn);         % set flat prior (unnormalized)
-% n_con = 0;                              % track number of constrained pts
-% for L=Lrange
-%   for k=krange
-%     for n=nrange 
-%     if any(q_con([L,k,n])>0) % check each proposed strategy with constraint
-%       prob(Lrange==L,krange==k,nrange==n,1) = 0;
-%       n_con = n_con+1;
-%     end
-%     end
-%   end
-% end
-% maxprob(1) = 1/(nn*nk*nL-n_con);        % set initial normalized max prob.
-% n_max_strategy(1) = nn*nk*nL-n_con;     % init: all valid strategies optimal
-% 
-% % iterate through each trial and update posterior prob of max score
-% for tr = trials
-% disp(['trial ' num2str(tr) ', ' num2str(find(trials==tr)) ' of ' num2str(numel(trials))]);
-% didHit = Q1(tr,end);
-% ss = N;
-% tic;
-% L_maxscore = zeros(nL,nk,nn);           % likelihood of achieving max score
-% for L=Lrange
-%   for k=krange
-%     for n=nrange
-%           [~,pEvac] = exp_score(qhill,[L,k,n],Phit,Q1(tr,:),lossmat);  
-%           if didHit % likelihood = pEvac
-%               L_maxscore(Lrange==L,krange==k,nrange==n) = pEvac;
-%           else      % likelihood = (1-pEvac)
-%               L_maxscore(Lrange==L,krange==k,nrange==n) = 1-pEvac;
-%           end
-%     end
-%   end
-% end
-% toc; % about 3 sec for 200 parameter space points (one trial)
-% % update posteriors, normalized max posterior, and # optimal strategies
-% prob(:,:,:,find(trials==tr)+1) = prob(:,:,:,trials==tr).*L_maxscore;
-% maxprob(find(trials==tr)+1) = max(unique(prob(:,:,:,find(trials==tr)+1)))./...
-%                             sum(sum(sum(prob(:,:,:,find(trials==tr)+1))));
-% n_max_strategy(find(trials==tr)+1) = numel(find(prob(:,:,:,find(trials==tr)+1)==max(unique(prob(:,:,:,find(trials==tr)+1)))));
-% end
-% 
-% % find final optimal strategy
-% [Lox,kox,nox] = ind2sub(size(prob(:,:,:,end)),find(prob(:,:,:,end)==max(unique(prob(:,:,:,end)))));
-% Lopt = Lrange(Lox); kopt = krange(kox); nopt = nrange(nox);
-% 
-% % find strategy evolution
-% Lt = zeros(sum(n_max_strategy==1),1); kt = Lt; nt = Lt; trt = Lt;
-% for tr = 1:sum(n_max_strategy==1)-1
-%   [Loxi,koxi,noxi] = ind2sub(size(prob(:,:,:,find(trials==tr)+1)),find(prob(:,:,:,find(trials==tr)+1)==max(unique(prob(:,:,:,find(trials==tr)+1)))));
-%   try assert(numel(Loxi)==1)
-%   catch
-%       continue
-%   end
-%   Lt(tr) = Lrange(Loxi); kt(tr) = krange(koxi); nt(tr) = nrange(noxi); trt(tr) = trials(tr);
-% end
-% Lt(end) = Lopt; kt(end) = kopt; nt(end) = nopt; trt(tr) = trials(end);
-% 
-% % plot colorplot of strategy evolution
-% strategies = zeros(numel(trials),numel(Phit));
-% for tr = trials
-%     strategies(trials==tr,:) = qhill(Phit,Lt(trials==tr),kt(trials==tr),nt(trials==tr));
-% end
-% 
-% % save Bayesian result
-% A.posteriors = prob;
-% A.param_space = {Lrange,krange,nrange};
-% A.norm_max_posterior = maxprob;
-% A.n_opt_strategies = n_max_strategy;
-% A.opt_params = [Lt,kt,nt,trt];
-% A.opt_strategies = strategies;
-%   
-% save('bayesian_ss50_ind.mat','A');
+%% Next, create simple Bayesian learner.
+% this updates in the order that trials were presented. use ALL trials.
+trials = 1:1:ntrials; trials = trials(:)';
+
+% loss matrix used to evaluate strategies
+lossmat = @(didHit_,didEvac_) 10*(didHit_.*~didEvac_) + ...
+                             6*(didHit_.*didEvac_) + ...
+                             0*(~didHit_.*~didEvac_) + ...
+                             2*(~didHit_.*didEvac_) ;
+                         
+% decision model, fcn of Phit and parameters to fit
+qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
+% qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
+Phit = 0:0.1:1; % list of Phits at which q will be evaluated
+q_con = @(pvec_)(qform(Phit,pvec_)-1); % constraint: q_con<=0
+
+% set search area of parameter space
+prange = cell(numel(params),1);
+prange{1} = linspace(0.01,1,50);
+prange{2} = linspace(3,10,36);
+% prange{1} = linspace(0.6,2,5); 
+% prange{2} = linspace(0.6,1.1,5);
+% prange{3} = linspace(5,35,4);
+psize = cellfun(@numel,prange)';
+
+ss_list = N; ss = N;
+A = struct('posteriors',cell(numel(ss_list),1),...
+           'param_space',cell(numel(ss_list),1),...
+           'norm_max_posterior',cell(numel(ss_list),1),...
+           'n_opt_strategies',cell(numel(ss_list),1),...
+           'opt_params',cell(numel(ss_list),1),...
+           'opt_strategies',cell(numel(ss_list),1)...
+           );
+
+% initialize matrices (normalizing 'prob' happens later)
+prob = zeros([numel(trials)+1,psize]);  % posterior probs at each timestep
+maxprob = zeros(numel(trials)+1,1);     % maximum normalized posterior prob
+n_max_strategy = zeros(numel(trials)+1,1); % number of optimal strategies
+prob(1,:,:,:) = ones(psize);            % set flat prior (unnormalized)
+n_con = 0;                              % track number of constrained pts
+for px = 1:prod(psize)                     % choose one param combination
+    pix = ind2sub_var_dim(psize,px,1);     % give the dimensional indices
+    par = index_each_cell(prange,pix);     % give corresponding param val
+    if any(q_con(par)>0)     % check this proposed strategy with constraint
+      prob(1,pix{:}) = 0;
+      n_con = n_con+1;
+    end
+end
+maxprob(1) = 1/(prod(psize)-n_con);     % set initial normalized max prob.
+n_max_strategy(1) = prod(psize)-n_con;  % init: all valid strategies optimal
+
+% iterate through each trial and update posterior prob of max score
+for tr = trials
+disp(['trial ' num2str(tr) ', ' num2str(find(trials==tr)) ' of ' num2str(numel(trials))]);
+didHit = Q1(tr,end);
+tic;
+L_maxscore = zeros(psize);           % likelihood of achieving max score
+for px=1:prod(psize)
+    pix = ind2sub_var_dim(psize,px,1);     % give the dimensional indices
+    par = index_each_cell(prange,pix);     % give corresponding param val
+    % calculate evac likeliood given ss, Phit_traj, & params          
+    [~,pEvac] = exp_score(qform,par,Phit,Q1(tr,:),lossmat);  
+          if didHit % likelihood = pEvac
+              L_maxscore(pix{:}) = pEvac;
+          else      % likelihood = (1-pEvac)
+              L_maxscore(pix{:}) = 1-pEvac;
+          end
+end
+toc; % about 3 sec for 200 parameter space points (one trial)
+
+% update posteriors, normalized max posterior, and # optimal strategies
+prob(find(trials==tr)+1,:,:,:) = prob(trials==tr,:,:,:).*shiftdim(L_maxscore,-1);
+maxprob(find(trials==tr)+1) = max(unique(prob(find(trials==tr)+1,:,:,:)))./...
+                                sum(sum(sum(prob(find(trials==tr)+1,:,:,:))));
+n_max_strategy(find(trials==tr)+1) = numel(find(prob(find(trials==tr)+1,:,:,:)==max(unique(prob(find(trials==tr)+1,:,:,:)))));
+end
+
+% find strategy evolution
+opt_params = zeros(sum(n_max_strategy==1),numel(psize)+1);
+maxtrials = find(n_max_strategy==1);
+for trx = 1:sum(n_max_strategy==1)
+  tr = maxtrials(trx);  
+  maxL = max(unique(prob(tr,:,:,:)));
+  pix = ind2sub_var_dim(size(prob(tr,:,:,:)),find(prob(tr,:,:,:)==maxL),1);
+  opt_params(trx,:) = [index_each_cell(prange,pix(2:end)),tr];
+end
+assert(opt_params(end,end)==numel(trials)+1);
+
+% plot colorplot of strategy evolution
+strategies = zeros(numel(maxtrials),numel(Phit));
+for trx = 1:numel(maxtrials)
+    tr = maxtrials(trx);
+    strategies(trx,:) = qform(Phit,opt_params(trx,1:end-1));
+end
+
+% save Bayesian result
+A.posteriors = prob;
+A.param_space = {Lrange,krange,nrange};
+A.norm_max_posterior = maxprob;
+A.n_opt_strategies = n_max_strategy;
+A.opt_params = [Lt,kt,nt,trt];
+A.opt_strategies = strategies;
+  
+save('bayesian_pl_ss50_ind_fine.mat','A');
 
 %% Now, allow this Bayesian learner to take into account shelter space.
 % what this means is that she will evaluate her own probability of
