@@ -140,18 +140,30 @@ nu_ind = 1;
 %% solve individual amster equation...
 
 % for each trial, solve master equation for 1 individual (2 states)
-tr = 19;
+tr = 1;
 %L = params(1);
 %k = params(2);
 %n = params(3);
 Phit = 0:0.1:1;
+figure; 
+for beta_ = [6,6.2,6.4]
+params = [1;beta_];
 q = @(Phit_) qform(Phit_,params);
 [T, P] = solve_master_binom(1,q,Q1(tr,:),Phit);
+        plot(T,P(:,end)'); hold on; 
+end
+        plot(1:1:60,Q1(tr,:),'k--');
+        legend('\beta = 6.0','\beta = 6.2','\beta = 6.4','Phit','location','northwest');
+        xlabel('time'); ylabel('prob. of evacuation');
+        title(['Individual Evacuation Probability, Trial ' num2str(tr)]);
 
-figure; plot(T,P(:,end)'); hold on; 
-        plot(1:1:60,Q1(tr,:)); 
-        legend('prob. of evacuation','Phit','location','northwest');
-        xlabel('time'); title(['Individual Evacuation Probability, Trial ' num2str(tr)]);
+figure; 
+for beta_ = [6,6.2,6.4]
+    plot(Phit,qform(Phit,[1;beta_])); hold on;
+end
+    legend('\alpha = 1, \beta = 6.0','\alpha = 1, \beta = 6.2','\alpha = 1, \beta = 6.4');
+    xlabel('Phit'); ylabel('ind. evacuation probability');
+    title('Potential Strategies, power-law model');
         
 %% fit for STATIC OPTIMAL behavior
 % for a given set of trials ('trials')

@@ -11,7 +11,7 @@ trials = 1:160;
 %% Next, create simple Bayesian learner.
 % this updates in the order that trials were presented. use ALL trials.
 trials = 1:1:ntrials; trials = trials(:)';
-
+trials = 1:2;
 % loss matrix used to evaluate strategies
 lossmat = @(didHit_,didEvac_) 10*(didHit_.*~didEvac_) + ...
                              6*(didHit_.*didEvac_) + ...
@@ -112,7 +112,7 @@ A.n_opt_strategies = n_max_strategy;
 A.opt_params = opt_params;
 A.opt_strategies = strategies;
   
-save('bayesian_pl_ss50_ind_fine.mat','A');
+%save('bayesian_pl_ss50_ind_fine_err-20-13.mat','A');
 
 %% Now, allow this Bayesian learner to take into account shelter space.
 % what this means is that she will evaluate her own probability of
@@ -239,7 +239,7 @@ A(ss_list==ss).opt_strategies = strategies;
   
 end  % end loop over ss
 
-%save('bayesian_pl_ss_ind_fine.mat','A');
+%save('bayesian_pl_ss50_ind_fine_err-40-13.mat','A');
 
 %% what would the Bayesian player score on entire game?
 lossmat = @(didHit_,didEvac_) 10*(didHit_.*~didEvac_) + ...
@@ -367,10 +367,13 @@ ss_ix(all_ss==5) = 1; ss_ix(all_ss==25) = 2; ss_ix(all_ss==50) = 3;
 % record movie
 F(numel(trials)+1) = struct('cdata',[],'colormap',[]);
 landscape = squeeze(A(1).posteriors(1,:,:,:));
+figure;
 surf(prange{2},prange{1},landscape);
 F(1) = getframe(gcf);
 for tr=trials
-    landscape = squeeze(A(ss_ix(tr)).posteriors(tr+1,:,:,:));
+    %landscape = squeeze(A(ss_ix(tr)).posteriors(tr+1,:,:,:));
+    %landscape = squeeze(A(3).posteriors(tr+1,:,:,:));
+    landscape = squeeze(A.posteriors(tr+1,:,:,:));
     surf(prange{2},prange{1},landscape);
     F(tr+1) = getframe(gcf);
 end
