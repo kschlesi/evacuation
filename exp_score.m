@@ -1,8 +1,8 @@
-function [scr,pEvac] = exp_score(q_model,pvec,Phit,Phit_traj,lossmat)
+function [scr,pEvac] = exp_score(q_model,pvec,Phit,Phit_traj,lossmat,varargin)
 	% need nargin q_model = 2;
     % need nargin lossmat = 2;
 	q = @(Phit_) q_model(Phit_,pvec);
-	[T,P] = solve_master_binom(1,q,Phit_traj,Phit);
+	[T,P] = solve_master_binom(1,q,Phit_traj,Phit,varargin);
     didHit = Phit_traj(end);
     trial_end_ix = find(T>=(find(Phit_traj==didHit,1,'first')+1),1,'first')-1;
     if ~numel(trial_end_ix)

@@ -11,7 +11,7 @@ trials = 1:160;
 %% Next, create simple Bayesian learner.
 % this updates in the order that trials were presented. use ALL trials.
 trials = 1:1:ntrials; trials = trials(:)';
-trials = 1:2;
+trials = 1:2; %************************************************************************
 % loss matrix used to evaluate strategies
 lossmat = @(didHit_,didEvac_) 10*(didHit_.*~didEvac_) + ...
                              6*(didHit_.*didEvac_) + ...
@@ -40,7 +40,8 @@ A = struct('posteriors',cell(numel(ss_list),1),...
            'norm_max_posterior',cell(numel(ss_list),1),...
            'n_opt_strategies',cell(numel(ss_list),1),...
            'opt_params',cell(numel(ss_list),1),...
-           'opt_strategies',cell(numel(ss_list),1)...
+           'opt_strategies',cell(numel(ss_list),1),...
+           'likelihoods',cell(numel(ss_list),1)...
            );
 
 % initialize matrices (normalizing 'prob' happens later)
@@ -48,6 +49,7 @@ prob = zeros([numel(trials)+1,psize]);  % posterior probs at each timestep
 maxprob = zeros(numel(trials)+1,1);     % maximum normalized posterior prob
 n_max_strategy = zeros(numel(trials)+1,1); % number of optimal strategies
 prob(1,:,:,:) = ones(psize);            % set flat prior (unnormalized)
+likes = zeros([numel(trials),psize]);   % raw likelihoods at each timestep
 n_con = 0;                              % track number of constrained pts
 for px = 1:prod(psize)                     % choose one param combination
     pix = ind2sub_var_dim(psize,px,1);     % give the dimensional indices
@@ -70,7 +72,8 @@ for px=1:prod(psize)
     pix = ind2sub_var_dim(psize,px,1);     % give the dimensional indices
     par = index_each_cell(prange,pix);     % give corresponding param val
     % calculate evac likeliood given ss, Phit_traj, & params          
-    [~,pEvac] = exp_score(qform,par,Phit,Q1(tr,:),lossmat);  
+    [~,pEvac] = exp_score(qform,par,Phit,Q1(tr,:),lossmat,...
+                          'AbsTol',1e-7,'RelTol',1e-8);
           if didHit % likelihood = pEvac
               L_maxscore(pix{:}) = pEvac;
           else      % likelihood = (1-pEvac)
@@ -80,6 +83,7 @@ end
 toc; % about 3 sec for 200 parameter space points (one trial)
 
 % update posteriors, normalized max posterior, and # optimal strategies
+likes(trials==tr,:,:,:) = shiftdim(L_maxscore,-1);
 prob(find(trials==tr)+1,:,:,:) = prob(trials==tr,:,:,:).*shiftdim(L_maxscore,-1);
 maxprob(find(trials==tr)+1) = max(unique(prob(find(trials==tr)+1,:,:,:)))./...
                                 sum(sum(sum(prob(find(trials==tr)+1,:,:,:))));
@@ -111,8 +115,9 @@ A.norm_max_posterior = maxprob;
 A.n_opt_strategies = n_max_strategy;
 A.opt_params = opt_params;
 A.opt_strategies = strategies;
-  
-%save('bayesian_pl_ss50_ind_fine_err-20-13.mat','A');
+A.likelihoods = likes;
+
+save('bayesian_pl_ss50_ind_fine_err-7-8.mat','A');
 
 %% Now, allow this Bayesian learner to take into account shelter space.
 % what this means is that she will evaluate her own probability of
@@ -255,7 +260,7 @@ for tr=trials
     [~,all_ss(tr)] = trial_ix(tr);       % set shelter space capacity
 end
 ss_ix(all_ss==5) = 1; ss_ix(all_ss==25) = 2; ss_ix(all_ss==50) = 3;
-load('bayesian_pl_ss_ind_fine.mat');
+load('bayesian_pl_ss_ind_fine_err-40-13.mat');
 
 %%%%individual Bayesian player:
 all_scr = zeros(numel(trials),1);
