@@ -1,5 +1,5 @@
-function L_maxscore = bayesian_game(psize,prange,qform,Phit,Q1,lossmat,N,...
-                                    A_bloc,tr,ss)
+function L_maxscore = bayesian_game(psize,prange,qform,q_con,Phit,Q1,lossmat,...
+                                    N,A_bloc,tr,ss,tolvec)
 % given all game info, this function computes the likelihood of successful
 % evacuation for a single trial (tr) with a given shelter space (ss).
 % required info: psize = dx1 vector, dimensions of strategy parameter space
@@ -25,13 +25,18 @@ function L_maxscore = bayesian_game(psize,prange,qform,Phit,Q1,lossmat,N,...
   for px=1:prod(psize)
     pix = ind2sub_var_dim(psize,px,1);     % give the dimensional indices
     par = index_each_cell(prange,pix);     % give corresponding param val
-    % calculate evac likeliood given ss, Phit_traj, & params
-    pEvac = succ_evac_prob(qform,par,Phit,tr,Q1(tr,:),lossmat,N,...
-                           A_bloc(:,:,:,pix{:}),ss);
-    if didHit % likelihood = pEvac
-        L_maxscore(pix{:}) = pEvac;
-    else      % likelihood = (1-pEvac)
-        L_maxscore(pix{:}) = 1-pEvac;
+    if any(q_con(par)>0)     % check this proposed strategy with constraint
+        L_maxscore(pix{:}) = 0;
+    else
+        % calculate evac likeliood given ss, Phit_traj, & params
+        pEvac = succ_evac_prob(qform,par,Phit,tr,Q1(tr,:),lossmat,N,...
+                               'As',A_bloc(:,:,:,pix{:}),'ss',ss,...
+                               'absTol',tolvec(1),'relTol',tolvec(2));
+        if didHit % likelihood = pEvac
+            L_maxscore(pix{:}) = pEvac;
+        else      % likelihood = (1-pEvac)
+            L_maxscore(pix{:}) = 1-pEvac;
+        end
     end
   end
   toc; % about 3 sec for 200 parameter space points (one trial)

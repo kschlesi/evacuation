@@ -3,18 +3,20 @@
 %  Using matlabpool and parfor
 %
 tic;
-matlabpool OPEN 13;
+matlabpool OPEN 40;
 myDir = pwd;
 
 % load overall data, set game parameters
 ntrials = 160;
 N = 50;
 ss_list = [5,25,50];
-tag = '_pl_ss_ind_fine_err-40-13';
+aT = 1e-20;
+rT = 1e-13;
 prange = cell(numel(params),1);
 prange{1} = linspace(0.01,1,50);
 prange{2} = linspace(3,10,36);
 psize = cellfun(@numel,prange)';
+tag = '_pl_ind_fine_err-20-13';
 
 % create A_bloc for each ss
 for ss=ss_list
@@ -49,7 +51,8 @@ parfor tasknum = 1:numtasks
         case 50, A_bloc = A_bloc50;
     end
     tr = mod(tasknum-1,ntrials)+1;
-    outputarray{tasknum} = bayesian_wrapper(ss,tr,prange,psize,A_bloc,myDir);
+    outputarray{tasknum} = bayesian_wrapper(ss,tr,prange,psize,A_bloc,...
+                                                        [aT,rT],tag,myDir);
 end
 
 % trials = 1:1:ntrials
