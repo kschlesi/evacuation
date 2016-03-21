@@ -11,6 +11,11 @@ prange{2} = linspace(3,10,36);
 psize = cellfun(@numel,prange)';
 tag = '_pl_ind_fine_err-20-13';
 
+qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
+% qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
+Phit = 0:0.1:1; % list of Phits at which q will be evaluated
+q_con = @(pvec_)(qform(Phit,pvec_)-1); % constraint: q_con<=0
+
 % set up saving struct
 A = struct('likelihoods',cell(numel(ss_list),1),...
            'posteriors',cell(numel(ss_list),1),...
