@@ -43,9 +43,51 @@ xlabel('Phit'); ylabel('evacuation probability'); title('best-fit hill model, in
 %legend(['\alpha = ' num2str(params(1)) ', \beta = ' num2str(params(2))]);
 hold off;
 
+%% fit for all group games ss=50
+
+% trials = unique([trial_ix('fTG',50,5,missing);...
+%             trial_ix('lTG',50,5,missing);...
+%             trial_ix('mR',50,5,missing)])';
+% trials = unique([trial_ix('fTG',50,25,missing);...
+%            trial_ix('lTG',50,25,missing);...
+%            trial_ix('mR',50,25,missing)])';
+% trials = unique([trial_ix('fTG',50,5,missing);...
+%             trial_ix('fTG',50,25,missing)])';
+% trials = unique([trial_ix('lTG',50,5,missing);...
+%             trial_ix('lTG',50,25,missing)])';
+trials = unique([trial_ix('mR',50,5,missing);...
+            trial_ix('mR',50,25,missing)])';
+        
+[H,J,~,~,~,Q1] = load_evac_data(0,trials,bins);
+qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
+Phit = 0:0.1:1;
+qfit = @(pv_) qform(Phit(:,2:end-1),pv_);
+MLfit = @(pvec_) -1*sum(((sum(H(:,2:end-1))-sum(J(:,2:end-1))).*log(1-qfit(pvec_)) + sum(J(:,2:end-1)).*log(qfit(pvec_))));
+startp = params;
+options = optimoptions(@fminunc,'MaxFunEvals',10000);
+[params1,MLval] = fminunc(MLfit,startp,options);
+A = zeros(length(startp));
+b = zeros(length(startp),1);
+% constrains all prob. as a function of Phit to be <=1
+q_con = @(pvec_)(qform(Phit,pvec_)-1); 
+[theta_con,MLval_con] = fmincon(MLfit,startp,A,b,A,b,0,100,@(pvec_)q_add_eq(pvec_,q_con));
+
+
+if MLval<MLval_con && all(qform(0:0.1:1,params1)<=1)
+    params = params1;
+else
+    params = theta_con;
+end
+
+figure(1); hold all; plot(Phit,qform(Phit,params),'--');
+xlabel('Phit'); ylabel('evacuation probability'); title('best-fit hill model, ind. trials, shelterSpace=50');
+%legend(['\Lambda = ' num2str(params(1)) ', k = ' num2str(params(2)) ', n = ' num2str(params(3))]);
+%legend(['\alpha = ' num2str(params(1)) ', \beta = ' num2str(params(2))]);
+hold off;        
+
 %% we can (b) solve the master equation for a given trial and q function
 %for tr=trials
-tr=19;
+tr=38;
 %L = params(1);
 %k = params(2);
 %n = params(3);

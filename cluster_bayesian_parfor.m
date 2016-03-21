@@ -9,19 +9,28 @@ myDir = pwd;
 % load overall data, set game parameters
 ntrials = 160;
 N = 50;
-ss_list = [5,25,50];
+ss_list = 50;
+%ss_list = [5,25,50];
 aT = 1e-20;
 rT = 1e-13;
-prange = cell(numel(params),1);
+d = 2;
+prange = cell(d,1);
 prange{1} = linspace(0.01,1,50);
 prange{2} = linspace(3,10,36);
 psize = cellfun(@numel,prange)';
 tag = '_pl_ind_fine_err-20-13';
 
+% set bayesian strategy and parameter space
+qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
+Phit = 0:0.1:1; % list of Phits at which q will be evaluated
+q_con = @(pvec_)(qform(Phit,pvec_)-1); % constraint: q_con<=0
+
 % create A_bloc for each ss
 for ss=ss_list
     eval(['A_bloc' num2str(ss) ' = zeros([N+1,N+1,numel(Phit),psize]);']);
     for px=1:prod(psize)
+    pix = ind2sub_var_dim(psize,px,1);     % give the dimensional indices
+    par = index_each_cell(prange,pix);     % give corresponding param val
     Apar = makeA(N,qform(Phit,par)); % create A-mat for this strategy & ss
     if ss<N     % update A-mat to disallow too many evacuations to shelter
       for i=1:length(Phit)
@@ -42,7 +51,7 @@ end
 numtasks = ntrials*numel(ss_list);
 outputarray = cell(numtasks,1);
 parfor tasknum = 1:numtasks
-    ss_list = [5,25,50];
+    ss_list = 50;%[5,25,50];
     ssx = floor((tasknum-1)/ntrials)+1;
     ss = ss_list(ssx);
     switch ss
@@ -51,7 +60,9 @@ parfor tasknum = 1:numtasks
         case 50, A_bloc = A_bloc50;
     end
     tr = mod(tasknum-1,ntrials)+1;
-    outputarray{tasknum} = bayesian_wrapper(ss,tr,prange,psize,A_bloc,...
+    %[outputarray{tasknum}] = [ss,tr];
+    [outputarray{tasknum}] = bayesian_wrapper(ss,tr,prange,psize,A_bloc,...
+                                                        qform,Phit,q_con,...
                                                         [aT,rT],tag,myDir);
 end
 
