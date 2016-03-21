@@ -31,6 +31,7 @@ end
 As = makeA(N,q(Phit_range));
 
 % Solver Options
+options = [];
 if any(ismemvar(varargin,'AbsTol'))
     aTol = varargin{find(ismemvar(varargin,'AbsTol'),1,'first')+1};
     options = odeset('AbsTol',aTol);
