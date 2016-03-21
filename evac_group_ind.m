@@ -175,8 +175,12 @@ figure; bar(mean_abs_b');
         
 %% looking at the DATA itself...
 
+% for each group on each trial...
+grpRank = zeros(ntrials);
+
 % is there a correlation between GROUP rank and....
-% (a) 
+% (a) mean individual rank within group
+
         
         
         
