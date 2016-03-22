@@ -3,7 +3,7 @@
 %% GROUP PREDICTION
 shelterSpace = 50;
 groupSize = 5;
-groupProtocol = 'fTG';
+groupProtocol = 'lTG';
 N = 50;
 p = 100;  % number of times to simulate
 [~,~,~,~,missing] = load_evac_data(0);
@@ -41,6 +41,9 @@ for j = 1:size(Q1,1) % iterate through each trial
 end
 nevac_b = zeros(numel(trials),1);
 nevac_t = zeros(numel(trials),nts);
+grp_dtime_var = zeros(numel(trials),N/groupSize,p);
+grp_dtime_dist_samp = zeros(numel(trials),N/groupSize,p);
+grp_dtime_dist_empi = zeros(numel(trials),N/groupSize,p);
 for tr = trials(:)'
     % randomly generate N individual evac times, p simulations
     % for comments see similar section above
@@ -100,11 +103,22 @@ for tr = trials(:)'
     % make a plot that breaks down group dynamics in a single instance
     px = 1;
     t_sort = sortentry([t_evac(:,px);NaN*zeros(N-size(t_evac,1),1)],'col',0,grpIDs(px,:));
-    figure; plot(C1(tr,:),'k--'); hold on; % observed in experiment
+    t_sort = reshape(t_sort,groupSize,numel(unique(grpIDs)));
+    switch groupProtocol
+        case 'fTG',
+          t_sort = sortentry(t_sort,'row',0,t_sort(1,:));
+        case 'lTG',
+          t_sort = sortentry(t_sort,'row',0,t_sort(end,:));
+        case 'mR',
+          t_sort = sortentry(t_sort,'row',0,t_sort(floor(groupSize/2)+1,:));  
+        case 'ind',
+          t_sort = sortentry(t_sort,'row',0,t_sort(1,:));
+    end
+    figure; plot(C1(tr,:),'k--'); hold all;  % observed in experiment
             plot(Q1(tr,:).*N,'.--');         % Phit trajectory
             plot(tbins,mean(Cbin,2),'-k');
             for grp = 1:numel(unique(grpIDs))
-                plot(t_sort((grp-1)*groupSize+1:grp*groupSize),(1:groupSize)+(grp-1)*groupSize,'-');
+                plot(t_sort(:,grp),(1:groupSize)+(grp-1)*groupSize,'-');
             end
             for grp = 1:numel(unique(grpIDs))
                 plot(1:size(Q1,2),ones(size(Q1,2),1).*(grp-1)*groupSize,':k');
@@ -116,7 +130,60 @@ for tr = trials(:)'
                    'location','northwest');
             xlabel('time'); ylabel('cumulative no. evacuated');
     
+	dtime_var = zeros(numel(unique(grpIDs)),p);
+    dtime_dist_samp = zeros(numel(unique(grpIDs)),p);
+    dtime_dist_empi = zeros(numel(unique(grpIDs)),p);
+    empi_times = [];
+        for i=find(diff(C1(tr,:)))
+            empi_times = [empi_times;repmat(i,diff(C1(tr,i:i+1))/groupSize,1)];
+        end
+        try assert(length(empi_times)==numel(unique(grpIDs)));
+        catch
+        	empi_times = [empi_times;NaN*ones(numel(unique(grpIDs))-length(empi_times),1)];
+        end
+    for px=1:p
+      t_sort = sortentry([t_evac(:,px);NaN*zeros(N-size(t_evac,1),1)],'col',0,grpIDs(px,:));
+      t_sort = reshape(t_sort,groupSize,numel(unique(grpIDs)));
+      t_sort = sortentry(t_sort,'row',0,t_sort(1,:));
+      for grp = 1:numel(unique(grpIDs))
+        gtimes = t_sort(:,grp);
+        % quantify variance in decision time
+        dtime_var(grp,px) = nanstd(gtimes);
+        % quantify mean distance from sampled group evac time
+        dtime_dist_samp(grp,px) = sqrt(nanmean((tgrp(grp,px)-gtimes).^2));
+        dtime_dist_empi(grp,px) = sqrt(nanmean((empi_times(grp)-gtimes).^2));
+      end
+    end
+    
+% plot the variances and distances from simulated and actual evac times    
+figure; hist(dtime_var');
+        xlabel('group evacuation time standard deviation');
+        ylabel('number of groups');
+        title(['Spread in Group Evacuation Times,' groupProtocol ', ss=' num2str(shelterSpace) ', gs=' num2str(groupSize)]);
+        leg = {'grp1','grp2','grp3','grp4','grp5','grp6','grp7','grp8','grp9','grp10'};
+        legend(leg);
+% figure; hist(dtime_dist_samp');
+%         xlabel('difference between ind. and group evac times (time steps)');
+%         ylabel('number of groups');
+%         title(['Sampled Individual v. Simulated Group Evac Times,' groupProtocol ', ss=' num2str(shelterSpace) ', gs=' num2str(groupSize)]);
+%         legend(leg);
+figure; hist(dtime_dist_empi');
+        xlabel('difference between ind. and group evac times (time steps)');
+        ylabel('number of groups');
+        title(['Sampled Individual v. Empirical Group Evac Times,' groupProtocol ', ss=' num2str(shelterSpace) ', gs=' num2str(groupSize)]);
+        legend(leg);
+
+grp_dtime_var(trials==tr,:,:) = shiftdim(dtime_var,-1);
+grp_dtime_dist_samp(trials==tr,:,:) = shiftdim(dtime_dist_samp,-1);
+grp_dtime_dist_empi(trials==tr,:,:) = shiftdim(dtime_dist_empi,-1);
 end  % end loop over trials
+
+%% win/lose strategies: plot things
+didHits = Q1(trials,end);
+varsHit = grp_dtime_var(~~didHits,:,:);
+varsMiss = grp_dtime_var(~didHits,:,:);
+figure; histc(varsHit(:)); hold all;
+        histc(varsMiss(:));
 
 %% plots of overall trialwise error stats and performance
 
