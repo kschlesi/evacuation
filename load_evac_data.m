@@ -1,6 +1,6 @@
 function [TotalPhitSeen,TotalPhitEvac,q,Crs_avg,missing,...
           Q1,T1,P1,C1,...
-          Qm,Tm,Pm,Cm] = load_evac_data(makeFigs,indx,bins)
+          Qm,Tm,Pm,Cm] = load_evac_data(makeFigs,indx,bins,ss)
 % This function loads evacuation data from 'evacuate_data.m'.
 % Inputs:
 %     makeFigs = boolean, whether to make figures
@@ -62,6 +62,11 @@ end
 % import experiment cumulative number evacauted
 C1 = evapeocumu;
 
+% set shelter space
+if nargin<4
+    ss = N;
+end
+
 % ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 % ****** WE WILL CONTANTINATE THE MATRICIES INTO TRIALS WE ******
 % *************** ONLY WANT TO CONSIDER  *************************
@@ -100,6 +105,16 @@ if nargin<2
     bins = -0.05:0.1:1.05; %% this rounds to NEAREST
 end
 
+% trial end times (effective, for ss<N)
+TrialEndTime = zeros(1,size(Qm,1)); % we will store the time at which the trials ended
+for j = 1:size(Qm,1) % iterate through each trial
+  if ss<N && Cm(j,end)==ss  % if shelter space filled with subjs still at home
+    TrialEndTime(j) = find(Cm(j,:)==ss,1,'first');
+  else                      % if shelter space did not fill until all evac
+    TrialEndTime(j) = find(Qm(j,:)==Qm(j,end),1,'first');
+  end
+end
+
 % This is the total amount of times each individual seen a specified range
 % of phit values.
 % (commented-out sections are a check for evacs AFTER trial end; none found)
@@ -110,11 +125,10 @@ TotalPhitSeen = zeros(N,length(bins)-1);
 for i = 1:1:N % iterate over all individuals
     for j = 1:1:size(Qm,1) % iterate over relevant trials
         evacTime = Tm(i,j); is0 = 0;
-        if isnan(evacTime) % no evacuation; ALL Phits seen until Qm = 1 or 0
-            assert(Qm(j,end)==0||Qm(j,end)==1);
-            try h1 = histcounts(Qm(j,1:find(Qm(j,:)==Qm(j,end),1,'first')),bins);
+        if isnan(evacTime) % no evacuation; ALL Phits seen until effective trial end
+            try h1 = histcounts(Qm(j,1:TrialEndTime(j)),bins);
             catch
-                h1 = histc(Qm(j,1:find(Qm(j,:)==Qm(j,end),1,'first')),bins);
+                h1 = histc(Qm(j,1:TrialEndTime(j)),bins);
                 h1 = h1(1:end-1);
             end
 %             if makeFigs

@@ -16,11 +16,11 @@ if (~iscell(A) && ~iscell(B)) || ...
     ((ischar(A) || iscellstr(A)) && (ischar(B) || iscellstr(B)))
     [Lia,Locb] = ismember(A,B,varargin{:});
 else
-    % otherwise.... use cellmem. Locb is NOT supported here.
+    % otherwise.... use cellmem. Locb is now supported.
     if ~iscell(A); A = {A}; end;
     if ~iscell(B); B = {B}; end;
-    Lia = cellmem(A,B);
-    Locb = [];
+    [Lia,Locb] = cellmem(A,B);
+    %Locb = [];
     if numel(varargin)
       warning('rows or legacy behavior not supported for these arguments'); 
     end

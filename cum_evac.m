@@ -1,7 +1,7 @@
 function [C,grpEvac,Cbin] = cum_evac(t_evac,grpIDs,groupProtocol,tbins)
 % makes cumulative evacuation trajectories
 
-grpIDs = lowify(grpIDs,0);
+%grpIDs = lowify(grpIDs,0);
 [p,~] = size(grpIDs);
 grpEvac = zeros(max(unique(grpIDs)),p).*NaN;
 C = zeros(size(grpEvac)).*NaN;

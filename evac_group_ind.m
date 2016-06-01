@@ -2,16 +2,16 @@
 
 %% GROUP PREDICTION
 shelterSpace = 50;
-groupSize = 5;
-groupProtocol = 'fTG';
+groupSize = 25;
+groupProtocol = 'mR';
 N = 50;
 p = 100;  % number of times to simulate
 [~,~,~,~,missing] = load_evac_data(0);
-toPlot = 0;
+toPlot = 1;
 
 % train model on individual trials (output 'params')
 trials = trial_ix('ind',shelterSpace,1,missing); bins = -0.05:0.1:1.05; 
-[H,J,~,~,~,Q1,T1,P1,C1] = load_evac_data(0,trials,bins); nts = size(Q1,2);
+[H,J,~,~,~,Q1,T1,P1,C1] = load_evac_data(0,trials,bins,ss); nts = size(Q1,2);
 % qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
 % Phit = 0:0.1:1;
 % qfit = @(pv_) qform(Phit(:,2:end),pv_);
@@ -87,7 +87,56 @@ for tr = trials(:)'
     [Cgrp,tgrp,Cbin] = cum_evac(t_evac,grpIDs,groupProtocol,tbins);
     % plot cumulative evacuated
     if toPlot
-    figure; plot(C1(tr,:),'k--'); hold on; % observed in experiment
+    figure(1); hold on; 
+    if groupSize==5
+     if strcmp(groupProtocol,'fTG')
+      if tr==trials(end)
+        subplot(3,4,[7,8,11,12]);
+      end
+      if find(trials==tr)<7 
+        subplot(3,4,find(trials==tr));
+      end
+      if find(trials==tr)==7 || find(trials==tr)==8
+        subplot(3,4,find(trials==tr)+2);
+      end
+     end
+     if strcmp(groupProtocol,'lTG')
+      if tr==trials(end)
+        subplot(2,4,[3,4,7,8]);
+      end
+      if find(trials==tr)<3 
+        subplot(2,4,find(trials==tr));
+      end
+      if find(trials==tr)==3 || find(trials==tr)==4
+        subplot(2,4,find(trials==tr)+2);
+      end
+     end
+    end
+    if groupSize==25
+     if strcmp(groupProtocol,'mR')
+      if tr==trials(end)
+        subplot(3,3,[7,8,11,12]);
+      end
+      if find(trials==tr)<7 
+        subplot(3,3,find(trials==tr));
+      end
+      if find(trials==tr)==7 || find(trials==tr)==8
+        subplot(3,3,find(trials==tr)+2);
+      end
+     end
+     if strcmp(groupProtocol,'lTG')
+      if tr==trials(end)
+        subplot(2,4,[3,4,7,8]);
+      end
+      if find(trials==tr)<3 
+        subplot(2,4,find(trials==tr));
+      end
+      if find(trials==tr)==3 || find(trials==tr)==4
+        subplot(2,4,find(trials==tr)+2);
+      end
+     end
+    end
+            plot(C1(tr,:),'k--'); hold on; % observed in experiment
             plot(Q1(tr,:).*N,':');         % Phit trajectory
             for i=1:10%p
                 plot(tgrp(:,i),Cgrp(:,i),'-o'); hold all;
@@ -95,10 +144,13 @@ for tr = trials(:)'
             end
             plot(tbins,mean(Cbin,2),'-k');
             title(['trial ' num2str(tr) ', ' num2str(p) ' samples']); axis([0 60 0 50])
+            if tr==trials(end)
             legend('empirical data','Phit trajectory (scaled by N)',...
-                   groupProtocol,...%'individual',
+                  [groupProtocol ' sampled trajectories'],...
                    'location','northwest');
+            end
             xlabel('time'); ylabel('cumulative no. evacuated');
+          hold off;
     end
     
     % for each relevant trial, compute nevac_b and nevac(t)
@@ -120,8 +172,31 @@ for tr = trials(:)'
         case 'ind',
           t_sort = sortentry(t_sort,'row',0,t_sort(1,:));
     end
-    figure; plot(C1(tr,:),'k--'); hold all;  % observed in experiment
-            plot(Q1(tr,:).*N,'.--');         % Phit trajectory
+    figure(2); hold on;
+        if strcmp(groupProtocol,'fTG')
+          if tr==trials(end)
+            subplot(3,4,[7,8,11,12]);
+          end
+          if find(trials==tr)<7 
+            subplot(3,4,find(trials==tr));
+          end
+          if find(trials==tr)==7 || find(trials==tr)==8
+            subplot(3,4,find(trials==tr)+2);
+          end
+        end
+        if strcmp(groupProtocol,'lTG')
+          if tr==trials(end)
+            subplot(2,4,[3,4,7,8]);
+          end
+          if find(trials==tr)<3 
+            subplot(2,4,find(trials==tr));
+          end
+          if find(trials==tr)==3 || find(trials==tr)==4
+            subplot(2,4,find(trials==tr)+2);
+          end
+        end
+            plot(C1(tr,:),'k--'); hold all;  % observed in experiment
+            plot(Q1(tr,:).*N,':');         % Phit trajectory
             plot(tbins,mean(Cbin,2),'-k');
             for grp = 1:numel(unique(grpIDs))
                 plot(t_sort(:,grp),(1:groupSize)+(grp-1)*groupSize,'-');
@@ -130,10 +205,12 @@ for tr = trials(:)'
                 plot(1:size(Q1,2),ones(size(Q1,2),1).*(grp-1)*groupSize,':k');
             end
             title(['trial ' num2str(tr) ', ' num2str(p) ' samples']); axis([0 60 0 50])
+            if trials(end)==tr
             legend('empirical data','Phit trajectory (scaled by N)',...
                    'mean sampled evacuations',...
                    'individual decisions',...
                    'location','northwest');
+            end
             xlabel('time'); ylabel('cumulative no. evacuated');
     end
     
@@ -182,22 +259,76 @@ for tr = trials(:)'
     
 % plot the variances and distances from simulated and actual evac times    
 if toPlot
-figure; hist(dtime_var');
-        xlabel('group evacuation time standard deviation');
+figure(3); hold on;
+    if strcmp(groupProtocol,'fTG')
+          if tr==trials(end)
+            subplot(3,4,[7,8,11,12]);
+          end
+          if find(trials==tr)<7 
+            subplot(3,4,find(trials==tr));
+          end
+          if find(trials==tr)==7 || find(trials==tr)==8
+            subplot(3,4,find(trials==tr)+2);
+          end
+    end
+    if strcmp(groupProtocol,'lTG')
+          if tr==trials(end)
+            subplot(2,4,[3,4,7,8]);
+          end
+          if find(trials==tr)<3 
+            subplot(2,4,find(trials==tr));
+          end
+          if find(trials==tr)==3 || find(trials==tr)==4
+            subplot(2,4,find(trials==tr)+2);
+          end
+    end
+        hist(dtime_var');
+        %xlabel('group evacuation time standard deviation');
+        xlabel('std (time steps)');
         ylabel('number of groups');
-        title(['Spread in Group Evacuation Times,' groupProtocol ', ss=' num2str(shelterSpace) ', gs=' num2str(groupSize)]);
+        %suptitle(['Spread in Group Evacuation Times,' groupProtocol ', ss=' num2str(shelterSpace) ', gs=' num2str(groupSize)]);
         leg = {'grp1','grp2','grp3','grp4','grp5','grp6','grp7','grp8','grp9','grp10'};
+        if trials(end)==tr
         legend(leg);
+        end
+        hold off;
 % figure; hist(dtime_dist_samp');
 %         xlabel('difference between ind. and group evac times (time steps)');
 %         ylabel('number of groups');
 %         title(['Sampled Individual v. Simulated Group Evac Times,' groupProtocol ', ss=' num2str(shelterSpace) ', gs=' num2str(groupSize)]);
 %         legend(leg);
-figure; hist(dtime_dist_empi');
-        xlabel('difference between ind. and group evac times (time steps)');
+figure(4); hold on;
+    if strcmp(groupProtocol,'fTG')
+          if tr==trials(end)
+            subplot(3,4,[7,8,11,12]);
+          end
+          if find(trials==tr)<7 
+            subplot(3,4,find(trials==tr));
+          end
+          if find(trials==tr)==7 || find(trials==tr)==8
+            subplot(3,4,find(trials==tr)+2);
+          end
+    end
+    if strcmp(groupProtocol,'lTG')
+          if tr==trials(end)
+            subplot(2,4,[3,4,7,8]);
+          end
+          if find(trials==tr)<3 
+            subplot(2,4,find(trials==tr));
+          end
+          if find(trials==tr)==3 || find(trials==tr)==4
+            subplot(2,4,find(trials==tr)+2);
+          end
+    end
+        hist(dtime_dist_empi');
+        xlabel('RMS difference (time steps)');
+        %xlabel('difference between ind. and group evac times (time steps)');
         ylabel('number of groups');
-        title(['Sampled Individual v. Empirical Group Evac Times,' groupProtocol ', ss=' num2str(shelterSpace) ', gs=' num2str(groupSize)]);
+        %suptitle(['Sampled Individual v. Empirical Group Evac Times,' groupProtocol ', ss=' num2str(shelterSpace) ', gs=' num2str(groupSize)]);
+        if trials(end)==tr
         legend(leg);
+        end
+        hold off;
 end
 
 grp_grpIDs(trials==tr,:,:) = shiftdim(grpIDs_new,-1);
@@ -206,6 +337,17 @@ grp_dtime_var(trials==tr,:,:) = shiftdim(dtime_var,-1);
 grp_dtime_dist_samp(trials==tr,:,:) = shiftdim(dtime_dist_samp,-1);
 grp_dtime_dist_empi(trials==tr,:,:) = shiftdim(dtime_dist_empi,-1);
 end  % end loop over trials
+figure(3); hold on;
+suptitle(['Spread in Group Evacuation Times,' groupProtocol ', ss=' num2str(shelterSpace) ', gs=' num2str(groupSize)]);
+hold off;
+figure(4); hold on;
+suptitle(['Sampled Individual v. Empirical Group Evac Times,' groupProtocol ', ss=' num2str(shelterSpace) ', gs=' num2str(groupSize)]);
+hold off;
+
+%figure(1); hold on; tightfig; hold off;
+%figure(2); hold on; tightfig; hold off;
+%figure(3); hold on; tightfig; hold off;
+%figure(4); hold on; tightfig; hold off;
 
 %% win/lose strategies: plot stats
 % info: did each group evacuate?
@@ -309,7 +451,7 @@ figure; bar(mean_abs_b');
 %% looking at the DATA itself...
 
 % for each group on each trial...
-grpRank = zeros(ntrials);
+grpScore = zeros(ntrials);
 
 % is there a correlation between GROUP rank and....
 % (a) mean individual rank within group
