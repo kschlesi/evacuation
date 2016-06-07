@@ -2,7 +2,8 @@
 
 %% set training and holdout trials; set shelter space
 
-ss = 50;
+ss = 5;
+[~,~,~,~,missing] = load_evac_data(0);
 train_trials = trial_ix('ind',ss,1,missing);
 
 % for LOOCV on ind trials:
@@ -11,11 +12,20 @@ train_trials = trial_ix('ind',ss,1,missing);
 %train_trials = removeval(train_trials,test_trials);
 
 % for cross-validation on group trials:
-groupProtocol = 'lTG';
-groupSize = 25;
+groupProtocol = 'mR';
+groupSize = 5;
 test_trials = trial_ix(groupProtocol,ss,groupSize,missing);
+switch groupProtocol
+                case 'fTG',
+                  gpstr = 'FTG';
+                case 'mR'
+                  gpstr = 'MV';
+                case 'lTG'
+                  gpstr = 'LTG';
+end
 
-makeFigs = true;
+makeFigs = false;
+legend1 = false;
 
 %% load necessary data
 
@@ -84,13 +94,78 @@ end
 tot_err(test_trials==tr) = Cexp(end) - C1(tr,end);
 ts_err(test_trials==tr,:) = Cexp(Cix)' - C1(tr,:);
 
-if makeFigs
-figure; bcolor(P',T,0:1:N); colorbar; hold all; % probability distribution
-        plot(T,Cexp);                           % expected value
-        plot(tbins,C1(tr,:));                         % empirical value
-        plot(tbins,Q1(tr,:).*N,'--');                 % Phit value
+err_pos = (sum(cumsum(P')<0.95));
+err_neg = (sum(cumsum(P')<0.05));
+stdevs = [err_pos-Cexp';Cexp'-err_neg];
+
+if makeFigs    
+    if legend1
+figure; %bcolor(P',T,0:1:N); colorbar; hold all; % probability distribution
+        plot(T,Cexp,'k','LineWidth',2); hold all;  % expected value
+        plot(tbins,C1(tr,:),'color',[0 0.5 0],'LineWidth',2);                         % empirical value
+        plot(tbins,Q1(tr,:).*N,'--','LineWidth',1);                 % Phit value
+        confinterval=shadedErrorBar_2(T,Cexp,stdevs,{'color','k','LineWidth',2},1);
+        set(confinterval.edge(1),'visible','off');
+        set(confinterval.edge(2),'visible','off');
         xlabel('time'); ylabel('# evacuated'); title(['trial ' num2str(tr)]);
+        axis([0 60 0 50]);
+        legend('expected individual behavior','empirical group behavior','disaster trajectory','95% confidence');
         hold off;
+    end
+        
+figure(2); hold all;
+          if groupSize==5 && ss==50
+            switch groupProtocol
+                case 'fTG',
+                  subplot(3,5,find(test_trials==tr));
+                case 'mR'
+                  subplot(3,5,10);
+                case 'lTG'
+                  subplot(3,5,find(test_trials==tr)+10);
+            end
+          end
+          if groupSize==25 && ss==50
+             switch groupProtocol
+                case 'fTG',
+                  subplot(4,4,find(test_trials==tr));
+                case 'mR'
+                  subplot(4,4,find(test_trials==tr)+4);
+                case 'lTG'
+                  subplot(4,4,find(test_trials==tr)+11);
+            end  
+          end
+          if groupSize==5 && ss==25
+            switch groupProtocol
+                case 'fTG',
+                  subplot(4,4,find(test_trials==tr));
+                case 'mR'
+                  subplot(4,4,find(test_trials==tr)+12);
+                case 'lTG'
+                  subplot(4,4,find(test_trials==tr)+7);
+            end
+          end
+          if groupSize==25 && ss==25
+             switch groupProtocol
+                case 'fTG',
+                  subplot(3,5,find(test_trials==tr));
+                case 'mR'
+                  subplot(3,5,find(test_trials==tr)+3);
+                case 'lTG'
+                  subplot(3,5,find(test_trials==tr)+10);
+            end  
+          end
+          
+%figure; %bcolor(P',T,0:1:N); colorbar; hold all; % probability distribution
+        plot(T,Cexp,'k','LineWidth',2); hold all;  % expected value
+        plot(tbins,C1(tr,:),'color',[0 0.5 0],'LineWidth',2);                         % empirical value
+        plot(tbins,Q1(tr,:).*N,'--','LineWidth',1);                 % Phit value
+        confinterval=shadedErrorBar_2(T,Cexp,stdevs,{'color','k','LineWidth',2},1);
+        set(confinterval.edge(1),'visible','off');
+        set(confinterval.edge(2),'visible','off');
+        xlabel('time'); ylabel('# evacuated'); title(['trial ' num2str(tr) ', ' gpstr]);
+        axis([0 60 0 50]);
+        %suptitle(['Shelter Capacity ' num2str(ss) ', Groups of ' num2str(groupSize)]);
+        hold off; 
 end
 
 end
@@ -99,11 +174,36 @@ end
 
 RMSE = sqrt(mean(ts_err.^2,1));
 
+%% MAKE PLOTS FOREAL
+
+% for a particular shelter capacity
+ss_list = [50,25,5];
+figure(3); 
+for ss = ss_list;
+sizes = [5,25];
+sizes = sizes(sizes<=ss);
+load(['ind_grp_crossval_ss' num2str(ss) 's.mat']); % t suffix = crossval; s suffix = sims
+for groupSize = sizes;
+    gix = find(sizes==groupSize);
+    %subplot(1,numel(sizes),gix);
+    subplot(3,2,find(ss_list==ss)*2+gix-2);
+    eval(['plot(tbins,mean(tse_ftg' num2str(groupSize) ')'',''b'',''LineWidth'',2);']); hold all;
+    eval(['plot(tbins,mean(tse_ltg' num2str(groupSize) ')'',''m'',''LineWidth'',2);']); 
+    eval(['plot(tbins,mean(tse_mr' num2str(groupSize) ')'',''g'',''LineWidth'',2);']);
+    eval(['plot(tbins,tse_ftg' num2str(groupSize) ''',''b--'');']); hold all;
+    eval(['plot(tbins,tse_ltg' num2str(groupSize) ''',''m--'');']); 
+    eval(['plot(tbins,tse_mr' num2str(groupSize) ''',''g--'');']);
+    xlabel('time step'); ylabel('RMS prediction error in cum. evacuations');
+    legend('FTG','LTG','MV'); axis([0 nts -ss ss]);
+    title(['shelter capacity ' num2str(ss) ', group size ' num2str(groupSize)]);
+end
+end
+
 %% MAKE PLOTS
 
 % for a particular shelter capacity
 
-ss = 50;
+ss = 5;
 sizes = [5,25];
 sizes = sizes(sizes<=ss);
 load(['ind_grp_crossval_ss' num2str(ss) '.mat']);

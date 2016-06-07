@@ -1,13 +1,23 @@
 % group v. individual
 
 %% GROUP PREDICTION
-shelterSpace = 50;
+shelterSpace = 25;
 groupSize = 5;
 groupProtocol = 'fTG';
 N = 50;
 p = 100;  % number of times to simulate
 [~,~,~,~,missing] = load_evac_data(0);
-toPlot = 0;
+toPlot = false;
+toPlot_samps = true;
+
+switch groupProtocol
+                case 'fTG',
+                  gpstr = 'FTG';
+                case 'mR'
+                  gpstr = 'MV';
+                case 'lTG'
+                  gpstr = 'LTG';
+end
 
 % train model on individual trials (output 'params')
 trials = trial_ix('ind',shelterSpace,1,missing); bins = -0.05:0.1:1.05; 
@@ -55,6 +65,20 @@ for tr = trials(:)'
     a = @(t_,P_,theta_) a_vec(t_,P_,theta_{1},theta_{2}); % this returns a prop. vector of only lower-triangular vals
     aix = tril(ones(N+1),-1);  % indices of lower-triangular entries
     theta = {makeA(N,q(Phit)); Q1(tr,:)}; % these are the non-explicitly-time-dependent input parameters
+    %%% fix As for ss<N
+    ss = shelterSpace;
+    if ss<N
+      for i=1:length(Phit)
+        % zero blocked transitions and transfer probabilities to allowed ones
+        theta{1}(ss+1,:,i) = theta{1}(ss+1,:,i) + sum(theta{1}(ss+2:end,:,i));
+        theta{1}(ss+2:end,:,i) = 0; 
+        theta{1}(:,ss+2:end,i) = 0;
+        % zero and re-compute diagonal
+        theta{1}(:,:,i) = theta{1}(:,:,i).*(~eye(size(theta{1}(:,:,i)))); assert(all(~diag(theta{1}(:,:,i))));
+        theta{1}(:,:,i) = theta{1}(:,:,i) - diag(sum(theta{1}(:,:,i))); %assert(all(~sum(A)));
+      end
+    end
+        
     P0 = [1;zeros(N,1)];   % this is the initial condition
     t0 = 0;                % starting time of simulation
     endx = find(Q1(tr,:)==Q1(tr,end),1,'first');
@@ -86,19 +110,63 @@ for tr = trials(:)'
     % this creates cumulative evac plots given group IDs and evac times
     [Cgrp,tgrp,Cbin] = cum_evac(t_evac,grpIDs,groupProtocol,tbins);
     % plot cumulative evacuated
-    if toPlot
-    figure; plot(C1(tr,:),'k--'); hold on; % observed in experiment
-            plot(Q1(tr,:).*N,':');         % Phit trajectory
+    if toPlot_samps
+    figure(1); hold all;
+          if groupSize==5 && shelterSpace==50
+            switch groupProtocol
+                case 'fTG',
+                  subplot(3,5,find(trials==tr));
+                case 'mR'
+                  subplot(3,5,10);
+                case 'lTG'
+                  subplot(3,5,find(trials==tr)+10);
+            end
+          end
+          if groupSize==25 && shelterSpace==50
+             switch groupProtocol
+                case 'fTG',
+                  subplot(4,4,find(trials==tr));
+                case 'mR'
+                  subplot(4,4,find(trials==tr)+4);
+                case 'lTG'
+                  subplot(4,4,find(trials==tr)+11);
+            end  
+          end
+          if groupSize==5 && shelterSpace==25
+            switch groupProtocol
+                case 'fTG',
+                  subplot(4,4,find(trials==tr));
+                case 'mR'
+                  subplot(4,4,find(trials==tr)+12);
+                case 'lTG'
+                  subplot(4,4,find(trials==tr)+7);
+            end
+          end
+          if groupSize==25 && shelterSpace==25
+             switch groupProtocol
+                case 'fTG',
+                  subplot(3,5,find(trials==tr));
+                case 'mR'
+                  subplot(3,5,find(trials==tr)+3);
+                case 'lTG'
+                  subplot(3,5,find(trials==tr)+10);
+            end  
+          end
+            plot(Q1(tr,:).*N,'--','LineWidth',1);  hold all;  % observed in experiment
+    	    plot(C1(tr,:),'--','color',[0 0.5 0],'LineWidth',2);  % Phit trajectory
+	        plot(tbins,mean(Cbin,2),'-k','LineWidth',2); 
             for i=1:10%p
-                plot(tgrp(:,i),Cgrp(:,i),'-o'); hold all;
+                plot(tgrp(:,i),Cgrp(:,i),':','LineWidth',1); 
                 %plot(t_mat(r_mat(:,i)~=0,i),ix(r_mat(r_mat(:,i)~=0,i))-1,':o'); hold all;
             end
-            plot(tbins,mean(Cbin,2),'-k');
-            title(['trial ' num2str(tr) ', ' num2str(p) ' samples']); axis([0 60 0 50])
-            legend('empirical data','Phit trajectory (scaled by N)',...
-                   groupProtocol,...%'individual',
+            %ax1.YColor = 'b';
+            title(['trial ' num2str(tr) ', ' gpstr]); axis([0 60 0 50]);
+            legend('Phit trajectory (scaled by N)','empirical evacuations',...
+                   ['simulated evacs (mean over ' num2str(p) ' samples)'] ,...
+                   ['randomly selected ' gpstr ' samples'],...%'individual',
                    'location','northwest');
-            xlabel('time'); ylabel('cumulative no. evacuated');
+            xlabel('time step'); ylabel('cumulative no. evacuated');
+            hold off;
     end
     
     % for each relevant trial, compute nevac_b and nevac(t)
