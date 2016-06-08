@@ -2,7 +2,7 @@
 
 %% set training and holdout trials; set shelter space
 
-ss = 5;
+ss = 50;
 [~,~,~,~,missing] = load_evac_data(0);
 train_trials = trial_ix('ind',ss,1,missing);
 
@@ -12,7 +12,7 @@ train_trials = trial_ix('ind',ss,1,missing);
 %train_trials = removeval(train_trials,test_trials);
 
 % for cross-validation on group trials:
-groupProtocol = 'mR';
+groupProtocol = 'lTG';
 groupSize = 5;
 test_trials = trial_ix(groupProtocol,ss,groupSize,missing);
 switch groupProtocol
@@ -24,7 +24,7 @@ switch groupProtocol
                   gpstr = 'LTG';
 end
 
-makeFigs = false;
+makeFigs = true;
 legend1 = false;
 
 %% load necessary data
@@ -115,43 +115,83 @@ figure; %bcolor(P',T,0:1:N); colorbar; hold all; % probability distribution
         
 figure(2); hold all;
           if groupSize==5 && ss==50
+            makeLeg = false;
             switch groupProtocol
                 case 'fTG',
-                  subplot(3,5,find(test_trials==tr));
+                  subplot(3,6,find(test_trials==tr));
                 case 'mR'
-                  subplot(3,5,10);
+                  subplot(3,6,[11,12,17,18]);
+                  makeLeg = true;
                 case 'lTG'
-                  subplot(3,5,find(test_trials==tr)+10);
+                  if find(test_trials==tr)<2  
+                    subplot(3,6,find(test_trials==tr)+9);
+                  else
+                    subplot(3,6,find(test_trials==tr)+11);  
+                  end
             end
           end
           if groupSize==25 && ss==50
+             makeLeg = false;
              switch groupProtocol
                 case 'fTG',
-                  subplot(4,4,find(test_trials==tr));
+                  subplot(4,5,find(test_trials==tr));
                 case 'mR'
-                  subplot(4,4,find(test_trials==tr)+4);
+                  if find(test_trials==tr)==1  
+                  subplot(4,5,5);
+                  else
+                      if find(test_trials==tr)<7
+                          subplot(4,5,find(test_trials==tr)+4);
+                      else
+                          subplot(4,5,[14,15,19,20]);
+                          makeLeg = true;
+                      end
+                  end
                 case 'lTG'
-                  subplot(4,4,find(test_trials==tr)+11);
+                  if find(test_trials==tr)<4
+                    subplot(4,5,find(test_trials==tr)+10);
+                  else
+                    subplot(4,5,find(test_trials==tr)+12);
+                  end
             end  
           end
           if groupSize==5 && ss==25
+            makeLeg = false;
             switch groupProtocol
                 case 'fTG',
-                  subplot(4,4,find(test_trials==tr));
+                  subplot(3,7,find(test_trials==tr));
                 case 'mR'
-                  subplot(4,4,find(test_trials==tr)+12);
+                  if find(test_trials==tr)<6
+                    subplot(3,7,find(test_trials==tr)+7);
+                  else
+                    makeLeg = true;
+                    subplot(3,7,[13,14,20,21]);
+                  end
                 case 'lTG'
-                  subplot(4,4,find(test_trials==tr)+7);
+                  subplot(3,7,find(test_trials==tr)+14);
             end
           end
           if groupSize==25 && ss==25
+             makeLeg = false;
              switch groupProtocol
                 case 'fTG',
-                  subplot(3,5,find(test_trials==tr));
+                  subplot(4,5,find(test_trials==tr));
                 case 'mR'
-                  subplot(3,5,find(test_trials==tr)+3);
+                  if find(test_trials==tr)<3  
+                    subplot(4,5,find(test_trials==tr)+3);
+                  else
+                    subplot(4,5,find(test_trials==tr)+3);  
+                  end
                 case 'lTG'
-                  subplot(3,5,find(test_trials==tr)+10);
+                  if find(test_trials==tr)<4  
+                    subplot(4,5,find(test_trials==tr)+10);
+                  else
+                    if find(test_trials==tr)<7  
+                      subplot(4,5,find(test_trials==tr)+12);
+                    else
+                      makeLeg = true;
+                      subplot(4,5,[14,15,19,20]);  
+                    end
+                  end
             end  
           end
           
@@ -164,6 +204,9 @@ figure(2); hold all;
         set(confinterval.edge(2),'visible','off');
         xlabel('time'); ylabel('# evacuated'); title(['trial ' num2str(tr) ', ' gpstr]);
         axis([0 60 0 50]);
+        if makeLeg
+            legend('expected individual behavior','empirical group behavior','disaster trajectory','95% confidence');
+        end
         %suptitle(['Shelter Capacity ' num2str(ss) ', Groups of ' num2str(groupSize)]);
         hold off; 
 end
@@ -199,7 +242,7 @@ for groupSize = sizes;
 end
 end
 
-%% MAKE PLOTS
+%% MAKE PLOTS (old)
 
 % for a particular shelter capacity
 
