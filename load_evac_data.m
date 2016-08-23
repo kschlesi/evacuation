@@ -101,8 +101,8 @@ Qm = Q1(indx,:);
 
 % This is how the PHIT Trajectroy was scaled during the experiment
 if nargin<2
-    %bins = 0:0.1:1.1; %% this is now incorrect! this rounds DOWN
-    bins = -0.05:0.1:1.05; %% this rounds to NEAREST
+    bins = 0:0.1:1.1; %% this is now incorrect! this rounds DOWN
+    %bins = -0.05:0.1:1.05; %% this rounds to NEAREST
 end
 
 % trial end times (effective, for ss<N)

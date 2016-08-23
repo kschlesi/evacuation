@@ -2,8 +2,8 @@
 
 %% GROUP PREDICTION
 shelterSpace = 25;
-groupSize = 25;
-groupProtocol = 'lTG';
+groupSize = 5;
+groupProtocol = 'fTG';
 N = 50;
 p = 100;  % number of times to simulate
 [~,~,~,~,missing] = load_evac_data(0);
@@ -20,7 +20,7 @@ switch groupProtocol
 end
 
 % train model on individual trials (output 'params')
-trials = trial_ix('ind',shelterSpace,1,missing); bins = -0.05:0.1:1.05; 
+trials = trial_ix('ind',shelterSpace,1,missing); bins = 0:0.1:1.1; %bins = -0.05:0.1:1.05; 
 [H,J,~,~,~,Q1,T1,P1,C1] = load_evac_data(0,trials,bins); nts = size(Q1,2);
 % qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
 % Phit = 0:0.1:1;
@@ -108,7 +108,7 @@ for tr = trials(:)'
     end
     
     % this creates cumulative evac plots given group IDs and evac times
-    [Cgrp,tgrp,Cbin] = cum_evac(t_evac,grpIDs,groupProtocol,tbins);
+    [Cgrp,tgrp,Cbin] = cum_evac(t_evac,grpIDs,groupProtocol,tbins,'ss',shelterSpace);
     % plot cumulative evacuated
     if toPlot_samps
     figure(1); hold all;
@@ -192,8 +192,8 @@ for tr = trials(:)'
                   end
             end  
           end
-            plot(Q1(tr,:).*N,'--','LineWidth',1);  hold all;  % observed in experiment
-    	    plot(C1(tr,:),'--','color',[0 0.5 0],'LineWidth',2);  % Phit trajectory
+    	    plot(C1(tr,:),'--','color',[0 0.5 0],'LineWidth',2);  hold all; % Phit trajectory
+            plot((floor(Q1(tr,:)*10)/10).*N,'--','LineWidth',1);  % observed in experiment
 	        plot(tbins,mean(Cbin,2),'-k','LineWidth',2); 
             for i=1:10%p
                 plot(tgrp(:,i),Cgrp(:,i),':','LineWidth',1); 
@@ -202,12 +202,13 @@ for tr = trials(:)'
             %ax1.YColor = 'b';
             title(['trial ' num2str(tr) ', ' gpstr]); axis([0 60 0 50]);
             if makeLeg
-                legend('Phit trajectory (scaled by N)','empirical evacuations',...
+                legend('empirical evacuations','Phit trajectory (scaled by N)',...
                    ['simulated evacs (mean over ' num2str(p) ' samples)'] ,...
                    ['randomly selected ' gpstr ' samples'],...%'individual',
                    'location','northwest');
             end
             xlabel('time step'); ylabel('cumulative no. evacuated');
+            title(trial_conv(tr,ss,groupSize,groupProtocol));
             hold off;
     end
     
