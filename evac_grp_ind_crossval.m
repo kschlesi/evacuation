@@ -2,7 +2,7 @@
 
 %% set training and holdout trials; set shelter space
 
-ss = 25;
+ss = 50;
 [~,~,~,~,missing] = load_evac_data(0);
 train_trials = trial_ix('ind',ss,1,missing);
 
@@ -11,17 +11,19 @@ train_trials = trial_ix('ind',ss,1,missing);
 %test_trials = train_trials(loo_ix);
 %train_trials = removeval(train_trials,test_trials);
 
-makeFigs = true;
-legend1 = false;
+makeFigs = true;  % allows any figures
+legend1 = false;  % keep this off...
+sumFigs = true;  % overrides full plots to make plots with ONE hit/miss
 
 % for cross-validation on group trials:
-gPs = ['fTG','lTG','mR'];
+gPs = {'fTG','lTG','mR'};
 gSs = [5,25];
 
 % loop over group sizes and protocols
-for groupProtocol = gPs
-  for groupSize = gSs
-
+for groupSize = gSs
+  for groupProtocol = gPs
+    groupProtocol = char(groupProtocol);
+    
     % set test trials and protocol strings
     test_trials = trial_ix(groupProtocol,ss,groupSize,missing);
     switch groupProtocol
@@ -89,6 +91,10 @@ for groupProtocol = gPs
     %loop over test trials
     for tr=test_trials';
     disp(['test trial ' num2str(tr)]);
+    [tr_hit,tr_miss] = tr_rep(ss,groupSize,groupProtocol);
+    if sumFigs && ~any([tr_hit,tr_miss]==tr)
+        continue
+    end
     [T, P] = solve_master_binom_ss(N,q,Q1(tr,:),Phit,'ss',ss);
     Cexp = sum(bsxfun(@times,P,0:1:N),2);
     tbins = 0:1:nts-1;
@@ -123,7 +129,8 @@ if makeFigs
         hold off;
     end
         
-figure(2); hold all;
+figure(find(gSs==groupSize)); hold all;
+    if ~sumFigs
           if groupSize==5 && ss==50
             makeLeg = false;
             switch groupProtocol
@@ -204,6 +211,13 @@ figure(2); hold all;
                   end
             end  
           end
+    end
+    if sumFigs && any([tr_hit,tr_miss]==tr)  % for sumFigs
+         horm = Q1(tr,end);  % (=0 if miss, =1 if hit)
+         assert(find([tr_hit,tr_miss]==tr)==(2-horm));
+         makeLeg = false;
+         subplot(3,2,2*find(ismemvar(gPs,groupProtocol))-horm);
+    end  % end fig size/arrangement preamble
           
 %figure; %bcolor(P',T,0:1:N); colorbar; hold all; % probability distribution
         plot(T,Cexp,'k','LineWidth',2); hold all;  % expected value
@@ -228,13 +242,35 @@ end  % end makeFigs
 savingstr = [lower(gpstr),num2str(groupSize)];
 eval(['rmse_' savingstr ' = rmse(ts_err'');']);
 eval(['tse_' savingstr ' = ts_err;']);
-save_vars = save_vars
 
-  end  % end loop over group size
-end  % end loop over protocol
+  end  % end loop over protocol
+  
+  %close all;  % clear current figs
+  
+end  % end loop over group size
 
-save(['ind_grp_crossval_ss' num2str(ss) 't.mat'],'');
+save(['ind_grp_crossval_ss' num2str(ss) 't.mat'],'rmse_ftg5',...
+                                                 'rmse_ftg25',...
+                                                 'rmse_ltg5',...
+                                                 'rmse_ltg25',...
+                                                 'rmse_mv5',...
+                                                 'rmse_mv25',...
+                                                 'tse_ftg5',...
+                                                 'tse_ftg25',...
+                                                 'tse_ltg5',...
+                                                 'tse_ltg25',...
+                                                 'tse_mv5',...
+                                                 'tse_mv25',...
+                                                 '-v7.3');
 
+%% PLOT for a particular SS and group size
+
+ss = 50;
+groupSize = 5;
+load(['ind_grp_crossval_ss' num2str(ss) 't.mat']);
+
+                                             
+                                             
 %% MAKE SUMMARY PLOTS
 
 
