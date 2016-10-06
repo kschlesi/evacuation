@@ -20,7 +20,7 @@ switch groupProtocol
 end
 
 % train model on individual trials (output 'params')
-trials = trial_ix('ind',shelterSpace,1,missing); bins = -0.05:0.1:1.05; 
+trials = trial_ix('ind',shelterSpace,1,missing); bins = 0:0.1:1.1; %bins = -0.05:0.1:1.05; 
 [H,J,~,~,~,Q1,T1,P1,C1] = load_evac_data(0,trials,bins); nts = size(Q1,2);
 % qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
 % Phit = 0:0.1:1;
@@ -108,52 +108,92 @@ for tr = trials(:)'
     end
     
     % this creates cumulative evac plots given group IDs and evac times
-    [Cgrp,tgrp,Cbin] = cum_evac(t_evac,grpIDs,groupProtocol,tbins);
+    [Cgrp,tgrp,Cbin] = cum_evac(t_evac,grpIDs,groupProtocol,tbins,'ss',shelterSpace);
     % plot cumulative evacuated
     if toPlot_samps
     figure(1); hold all;
           if groupSize==5 && shelterSpace==50
+            makeLeg = false;
             switch groupProtocol
                 case 'fTG',
-                  subplot(3,5,find(trials==tr));
+                  subplot(3,6,find(trials==tr));
                 case 'mR'
-                  subplot(3,5,10);
+                  subplot(3,6,[11,12,17,18]);
+                  makeLeg = true;
                 case 'lTG'
-                  subplot(3,5,find(trials==tr)+10);
+                  if find(trials==tr)<2  
+                    subplot(3,6,find(trials==tr)+9);
+                  else
+                    subplot(3,6,find(trials==tr)+11);  
+                  end
             end
           end
           if groupSize==25 && shelterSpace==50
+             makeLeg = false;
              switch groupProtocol
                 case 'fTG',
-                  subplot(4,4,find(trials==tr));
+                  subplot(4,5,find(trials==tr));
                 case 'mR'
-                  subplot(4,4,find(trials==tr)+4);
+                  if find(trials==tr)==1  
+                  subplot(4,5,5);
+                  else
+                      if find(trials==tr)<7
+                          subplot(4,5,find(trials==tr)+4);
+                      else
+                          subplot(4,5,[14,15,19,20]);
+                          makeLeg = true;
+                      end
+                  end
                 case 'lTG'
-                  subplot(4,4,find(trials==tr)+11);
+                  if find(trials==tr)<4
+                    subplot(4,5,find(trials==tr)+10);
+                  else
+                    subplot(4,5,find(trials==tr)+12);
+                  end
             end  
           end
           if groupSize==5 && shelterSpace==25
+            makeLeg = false;
             switch groupProtocol
                 case 'fTG',
-                  subplot(4,4,find(trials==tr));
+                  subplot(3,7,find(trials==tr));
                 case 'mR'
-                  subplot(4,4,find(trials==tr)+12);
+                  if find(trials==tr)<6
+                    subplot(3,7,find(trials==tr)+7);
+                  else
+                    makeLeg = true;
+                    subplot(3,7,[13,14,20,21]);
+                  end
                 case 'lTG'
-                  subplot(4,4,find(trials==tr)+7);
+                  subplot(3,7,find(trials==tr)+14);
             end
           end
           if groupSize==25 && shelterSpace==25
+             makeLeg = false;
              switch groupProtocol
                 case 'fTG',
-                  subplot(3,5,find(trials==tr));
+                  subplot(4,5,find(trials==tr));
                 case 'mR'
-                  subplot(3,5,find(trials==tr)+3);
+                  if find(trials==tr)<3  
+                    subplot(4,5,find(trials==tr)+3);
+                  else
+                    subplot(4,5,find(trials==tr)+3);  
+                  end
                 case 'lTG'
-                  subplot(3,5,find(trials==tr)+10);
+                  if find(trials==tr)<4  
+                    subplot(4,5,find(trials==tr)+10);
+                  else
+                    if find(trials==tr)<7  
+                      subplot(4,5,find(trials==tr)+12);
+                    else
+                      makeLeg = true;
+                      subplot(4,5,[14,15,19,20]);  
+                    end
+                  end
             end  
           end
-            plot(Q1(tr,:).*N,'--','LineWidth',1);  hold all;  % observed in experiment
-    	    plot(C1(tr,:),'--','color',[0 0.5 0],'LineWidth',2);  % Phit trajectory
+    	    plot(C1(tr,:),'--','color',[0 0.5 0],'LineWidth',2);  hold all; % Phit trajectory
+            plot((floor(Q1(tr,:)*10)/10).*N,'--','LineWidth',1);  % observed in experiment
 	        plot(tbins,mean(Cbin,2),'-k','LineWidth',2); 
             for i=1:10%p
                 plot(tgrp(:,i),Cgrp(:,i),':','LineWidth',1); 
@@ -161,11 +201,14 @@ for tr = trials(:)'
             end
             %ax1.YColor = 'b';
             title(['trial ' num2str(tr) ', ' gpstr]); axis([0 60 0 50]);
-            legend('Phit trajectory (scaled by N)','empirical evacuations',...
+            if makeLeg
+                legend('empirical evacuations','Phit trajectory (scaled by N)',...
                    ['simulated evacs (mean over ' num2str(p) ' samples)'] ,...
                    ['randomly selected ' gpstr ' samples'],...%'individual',
                    'location','northwest');
+            end
             xlabel('time step'); ylabel('cumulative no. evacuated');
+            title(trial_conv(tr,ss,groupSize,groupProtocol));
             hold off;
     end
     
@@ -389,7 +432,46 @@ grpRank = zeros(ntrials);
         
         
         
-        
+        if groupSize==5 && shelterSpace==50
+            switch groupProtocol
+                case 'fTG',
+                  subplot(3,5,find(trials==tr));
+                case 'mR'
+                  subplot(3,5,10);
+                case 'lTG'
+                  subplot(3,5,find(trials==tr)+10);
+            end
+          end
+          if groupSize==25 && shelterSpace==50
+             switch groupProtocol
+                case 'fTG',
+                  subplot(4,4,find(trials==tr));
+                case 'mR'
+                  subplot(4,4,find(trials==tr)+4);
+                case 'lTG'
+                  subplot(4,4,find(trials==tr)+11);
+            end  
+          end
+          if groupSize==5 && shelterSpace==25
+            switch groupProtocol
+                case 'fTG',
+                  subplot(4,4,find(trials==tr));
+                case 'mR'
+                  subplot(4,4,find(trials==tr)+12);
+                case 'lTG'
+                  subplot(4,4,find(trials==tr)+7);
+            end
+          end
+          if groupSize==25 && shelterSpace==25
+             switch groupProtocol
+                case 'fTG',
+                  subplot(3,5,find(trials==tr));
+                case 'mR'
+                  subplot(3,5,find(trials==tr)+3);
+                case 'lTG'
+                  subplot(3,5,find(trials==tr)+10);
+            end  
+          end
         
         
         

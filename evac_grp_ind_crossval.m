@@ -2,7 +2,7 @@
 
 %% set training and holdout trials; set shelter space
 
-ss = 5;
+ss = 25;
 [~,~,~,~,missing] = load_evac_data(0);
 train_trials = trial_ix('ind',ss,1,missing);
 
@@ -13,7 +13,7 @@ train_trials = trial_ix('ind',ss,1,missing);
 
 % for cross-validation on group trials:
 groupProtocol = 'mR';
-groupSize = 5;
+groupSize = 25;
 test_trials = trial_ix(groupProtocol,ss,groupSize,missing);
 switch groupProtocol
                 case 'fTG',
@@ -24,16 +24,22 @@ switch groupProtocol
                   gpstr = 'LTG';
 end
 
-makeFigs = false;
+makeFigs = true;
 legend1 = false;
 
 %% load necessary data
 
-bins = -0.05:0.1:1.05;  % this gives the bin EDGES for Phit values
+%bins = -0.05:0.1:1.05;  % this gives the bin EDGES for Phit values
+bins = 0:0.1:1.1;   % this rounds DOWN
 [Htrain,Jtrain,Theta,AvgCumEvac,missing,Q1,T1,P1,C1] = load_evac_data(0,train_trials,bins);
 [Htest,Jtest] = load_evac_data(0,test_trials,bins);
 [ntrials,nts] = size(Q1);
 [N,~] = size(P1);
+
+trEnd = zeros(1,size(Q1,1)); % we will store the time at which the trials ended
+for j = 1:size(Q1,1) % iterate through each trial
+    trEnd(j) = find(Q1(j,:)==Q1(j,end),1,'first');
+end
 
 %% first, perform (individual) fit on training trials
 % with maximum likelihood estimation
@@ -88,11 +94,11 @@ for tx=tbins
   try  
     Cix(tbins==tx) = find(T>=tx,1,'first');
   catch
-    Cix(tbins==ix) = Cix(find(tbins==ix)-1);
+    Cix(tbins==tx) = Cix(find(tbins==tx)-1);
   end
 end
-tot_err(test_trials==tr) = Cexp(end) - C1(tr,end);
-ts_err(test_trials==tr,:) = Cexp(Cix)' - C1(tr,:);
+tot_err(test_trials==tr) = Cexp(trEnd(tr)) - C1(tr,trEnd(tr));
+ts_err(test_trials==tr,1:trEnd(tr)) = Cexp(Cix(1:trEnd(tr)))' - C1(tr,1:trEnd(tr));
 
 err_pos = (sum(cumsum(P')<0.95));
 err_neg = (sum(cumsum(P')<0.05));
@@ -103,7 +109,7 @@ if makeFigs
 figure; %bcolor(P',T,0:1:N); colorbar; hold all; % probability distribution
         plot(T,Cexp,'k','LineWidth',2); hold all;  % expected value
         plot(tbins,C1(tr,:),'color',[0 0.5 0],'LineWidth',2);                         % empirical value
-        plot(tbins,Q1(tr,:).*N,'--','LineWidth',1);                 % Phit value
+        plot(tbins,N*(floor((Q1(tr,:))*10)/10),'--','LineWidth',1);                 % Phit value
         confinterval=shadedErrorBar_2(T,Cexp,stdevs,{'color','k','LineWidth',2},1);
         set(confinterval.edge(1),'visible','off');
         set(confinterval.edge(2),'visible','off');
@@ -115,73 +121,157 @@ figure; %bcolor(P',T,0:1:N); colorbar; hold all; % probability distribution
         
 figure(2); hold all;
           if groupSize==5 && ss==50
+            makeLeg = false;
             switch groupProtocol
                 case 'fTG',
-                  subplot(3,5,find(test_trials==tr));
+                  subplot(3,6,find(test_trials==tr));
                 case 'mR'
-                  subplot(3,5,10);
+                  subplot(3,6,[11,12,17,18]);
+                  makeLeg = true;
                 case 'lTG'
-                  subplot(3,5,find(test_trials==tr)+10);
+                  if find(test_trials==tr)<2  
+                    subplot(3,6,find(test_trials==tr)+9);
+                  else
+                    subplot(3,6,find(test_trials==tr)+11);  
+                  end
             end
           end
           if groupSize==25 && ss==50
+             makeLeg = false;
              switch groupProtocol
                 case 'fTG',
-                  subplot(4,4,find(test_trials==tr));
+                  subplot(4,5,find(test_trials==tr));
                 case 'mR'
-                  subplot(4,4,find(test_trials==tr)+4);
+                  if find(test_trials==tr)==1  
+                  subplot(4,5,5);
+                  else
+                      if find(test_trials==tr)<7
+                          subplot(4,5,find(test_trials==tr)+4);
+                      else
+                          subplot(4,5,[14,15,19,20]);
+                          makeLeg = true;
+                      end
+                  end
                 case 'lTG'
-                  subplot(4,4,find(test_trials==tr)+11);
+                  if find(test_trials==tr)<4
+                    subplot(4,5,find(test_trials==tr)+10);
+                  else
+                    subplot(4,5,find(test_trials==tr)+12);
+                  end
             end  
           end
           if groupSize==5 && ss==25
+            makeLeg = false;
             switch groupProtocol
                 case 'fTG',
-                  subplot(4,4,find(test_trials==tr));
+                  subplot(3,7,find(test_trials==tr));
                 case 'mR'
-                  subplot(4,4,find(test_trials==tr)+12);
+                  if find(test_trials==tr)<6
+                    subplot(3,7,find(test_trials==tr)+7);
+                  else
+                    makeLeg = true;
+                    subplot(3,7,[13,14,20,21]);
+                  end
                 case 'lTG'
-                  subplot(4,4,find(test_trials==tr)+7);
+                  subplot(3,7,find(test_trials==tr)+14);
             end
           end
           if groupSize==25 && ss==25
+             makeLeg = false;
              switch groupProtocol
                 case 'fTG',
-                  subplot(3,5,find(test_trials==tr));
+                  subplot(4,5,find(test_trials==tr));
                 case 'mR'
-                  subplot(3,5,find(test_trials==tr)+3);
+                  if find(test_trials==tr)<3  
+                    subplot(4,5,find(test_trials==tr)+3);
+                  else
+                    subplot(4,5,find(test_trials==tr)+3);  
+                  end
                 case 'lTG'
-                  subplot(3,5,find(test_trials==tr)+10);
+                  if find(test_trials==tr)<4  
+                    subplot(4,5,find(test_trials==tr)+10);
+                  else
+                    if find(test_trials==tr)<7  
+                      subplot(4,5,find(test_trials==tr)+12);
+                    else
+                      makeLeg = true;
+                      subplot(4,5,[14,15,19,20]);  
+                    end
+                  end
             end  
           end
           
 %figure; %bcolor(P',T,0:1:N); colorbar; hold all; % probability distribution
         plot(T,Cexp,'k','LineWidth',2); hold all;  % expected value
         plot(tbins,C1(tr,:),'color',[0 0.5 0],'LineWidth',2);                         % empirical value
-        plot(tbins,Q1(tr,:).*N,'--','LineWidth',1);                 % Phit value
+        plot(tbins,N*(floor((Q1(tr,:))*10)/10),'--','LineWidth',1);                 % Phit value
         confinterval=shadedErrorBar_2(T,Cexp,stdevs,{'color','k','LineWidth',2},1);
         set(confinterval.edge(1),'visible','off');
         set(confinterval.edge(2),'visible','off');
         xlabel('time'); ylabel('# evacuated'); title(['trial ' num2str(tr) ', ' gpstr]);
         axis([0 60 0 50]);
+        if makeLeg
+            legend('expected individual behavior','empirical group behavior','disaster trajectory','95% confidence');
+        end
         %suptitle(['Shelter Capacity ' num2str(ss) ', Groups of ' num2str(groupSize)]);
+        title(trial_conv(tr,ss,groupSize,groupProtocol));
         hold off; 
 end
 
 end
 
-%% comparison:
+RMSEs = rmse(ts_err');
+ % LOOP OVER GROUP SIZE AND protocol?
 
-RMSE = sqrt(mean(ts_err.^2,1));
 
-%% MAKE PLOTS FOREAL
+%% MAKE SUMMARY PLOTS
+
 
 % for a particular shelter capacity
+ss_list = 25;
+for ss = ss_list;
+figure(find(ss_list==ss));
+sizes = [5,25];
+sizes = sizes(sizes<=ss);
+tbins = 0:1:nts-1;
+for groupSize = sizes;
+    gix = find(sizes==groupSize);
+  for tp=[1,2];  
+    if tp==1
+        strg = 'Naive Cross-validation Error';
+        load(['ind_grp_crossval_ss' num2str(ss) 't.mat']); % t suffix = crossval; s suffix = sims
+    else
+        strg = 'Grouped Individual Simulation Error';
+        load(['ind_grp_crossval_ss' num2str(ss) 's.mat']); % t suffix = crossval; s suffix = sims
+    end
+    subplot(2,2,2*gix-(2-tp));
+    eval(['plot(tbins,mean(tse_ftg' num2str(groupSize) ')'',''b'',''LineWidth'',2);']); hold all;
+    eval(['plot(tbins,mean(tse_ltg' num2str(groupSize) ')'',''m'',''LineWidth'',2);']); 
+    eval(['tsmr=tse_mr' num2str(groupSize) ';']);
+    if numel(tsmr)==length(tsmr)
+      eval(['plot(tbins,tse_mr' num2str(groupSize) ''',''g'',''LineWidth'',2);']);
+    else
+      eval(['plot(tbins,mean(tse_mr' num2str(groupSize) ')'',''g'',''LineWidth'',2);']);
+    end
+    eval(['plot(tbins,tse_ftg' num2str(groupSize) ''',''b--'');']); hold all;
+    eval(['plot(tbins,tse_ltg' num2str(groupSize) ''',''m--'');']); 
+    eval(['plot(tbins,tse_mr' num2str(groupSize) ''',''g--'');']);
+    xlabel('time step'); ylabel('prediction error in total evacuations');
+    legend('FTG','LTG','MV'); axis([0 nts -ss ss]);
+    %title(['shelter capacity ' num2str(ss) ', group size ' num2str(groupSize)]);
+    title([strg ', group size ' num2str(groupSize)]);
+  end
+end
+end
+
+%% old
+% for a particular shelter capacity
 ss_list = [50,25,5];
-figure(3); 
+figure(3);
 for ss = ss_list;
 sizes = [5,25];
 sizes = sizes(sizes<=ss);
+load(['ind_grp_crossval_ss' num2str(ss) 't.mat']); % t suffix = crossval; s suffix = sims
 load(['ind_grp_crossval_ss' num2str(ss) 's.mat']); % t suffix = crossval; s suffix = sims
 for groupSize = sizes;
     gix = find(sizes==groupSize);
@@ -199,11 +289,11 @@ for groupSize = sizes;
 end
 end
 
-%% MAKE PLOTS
+%% MAKE PLOTS (old)
 
 % for a particular shelter capacity
 
-ss = 5;
+ss = 50;
 sizes = [5,25];
 sizes = sizes(sizes<=ss);
 load(['ind_grp_crossval_ss' num2str(ss) '.mat']);

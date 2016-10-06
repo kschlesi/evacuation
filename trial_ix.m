@@ -2,6 +2,8 @@ function [ix,ss,gs] = trial_ix(groupProtocol,shelterSpace,groupSize,missing)
 
 load('experiment.mat');
 
+% special case: if one argument structured [gp,ss,gs] then return str for
+% protocol and other arguments as looked up in gamestatus info
 if nargin==1
     gp = gamestatus(groupProtocol,1);
     ss = gamestatus(groupProtocol,2);
@@ -15,6 +17,7 @@ if nargin==1
     return
 end
 
+% normal thing: 
 switch groupProtocol
     case 'ind',
         if nargin<3
