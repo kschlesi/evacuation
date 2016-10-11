@@ -8,10 +8,10 @@ N = 50;
 p = 100;  % number of times to simulate
 [~,~,~,~,missing] = load_evac_data(0);
 toPlot = false;
-toPlot_samps = true;
+toPlot_examples = true;
 
 switch groupProtocol
-                case 'fTG',
+                case 'fTG'
                   gpstr = 'FTG';
                 case 'mR'
                   gpstr = 'MV';
@@ -22,25 +22,11 @@ end
 % train model on individual trials (output 'params')
 trials = trial_ix('ind',shelterSpace,1,missing); bins = 0:0.1:1.1; %bins = -0.05:0.1:1.05; 
 [H,J,~,~,~,Q1,T1,P1,C1] = load_evac_data(0,trials,bins); nts = size(Q1,2);
-% qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
-% Phit = 0:0.1:1;
-% qfit = @(pv_) qform(Phit(:,2:end),pv_);
-% MLfit = @(pvec) -1*sum(((sum(H(:,2:end))-sum(J(:,2:end))).*log(1-qfit(pvec)) + sum(J(:,2:end)).*log(qfit(pvec))));
-% startp = [1;0.5;10];
+
 qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
-Phit = 0:0.1:1;
-qfit = @(pv_) qform(Phit(:,2:end-1),pv_);
-MLfit = @(pvec_) -1*sum(((sum(H(:,2:end-1))-sum(J(:,2:end-1))).*log(1-qfit(pvec_)) + sum(J(:,2:end-1)).*log(qfit(pvec_))));
 startp = [1.1;1];
-options = optimoptions(@fminunc,'MaxFunEvals',10000);
-[params1,MLval] = fminunc(MLfit,startp,options);
-A = zeros(length(startp)); b = zeros(1,length(startp)); q_con = @(pvec_)(qform(Phit,pvec_)-1); 
-[theta_con,MLval_con] = fmincon(MLfit,startp,A,b,A,b,0,100,@(pvec_)q_add_eq(pvec_,q_con));
-if MLval<MLval_con && all(qform(Phit,params1)<=1)
-    params = params1;
-else
-    params = theta_con;
-end
+Phit = 0:0.1:1;
+params = ML_fit_beta(qform,Phit(2:end-1),H(:,2:end-1),J(:,2:end-1),startp);
 
 % choose trials to predict
 trials = trial_ix(groupProtocol,shelterSpace,groupSize,missing);
@@ -110,7 +96,7 @@ for tr = trials(:)'
     % this creates cumulative evac plots given group IDs and evac times
     [Cgrp,tgrp,Cbin] = cum_evac(t_evac,grpIDs,groupProtocol,tbins,'ss',shelterSpace);
     % plot cumulative evacuated
-    if toPlot_samps
+    if toPlot_examples
     figure(1); hold all;
           if groupSize==5 && shelterSpace==50
             makeLeg = false;

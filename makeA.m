@@ -1,4 +1,4 @@
-function [A,A_prefax] = makeA(N,qvals)
+function [A,A_prefax] = makeA(N,qvals,ss)
 
 qvals = qvals(:)';
 qs = numel(qvals);
@@ -18,5 +18,21 @@ for j=1:qs
     A(:,:,j) = A(:,:,j).*A_prefax; assert(all(~diag(A(:,:,j))));
     A(:,:,j) = A(:,:,j) - diag(sum(A(:,:,j)));
 end
+
+% fix As for ss<N
+if nargin>2
+    if ss<N
+      for i=1:qs
+        % zero blocked transitions and transfer probabilities to allowed ones
+        A(ss+1,:,i) = A(ss+1,:,i) + sum(A(ss+2:end,:,i));
+        A(ss+2:end,:,i) = 0; 
+        A(:,ss+2:end,i) = 0;
+        % zero and re-compute diagonal
+        A(:,:,i) = A(:,:,i).*(~eye(size(A(:,:,i)))); assert(all(~diag(A(:,:,i))));
+        A(:,:,i) = A(:,:,i) - diag(sum(A(:,:,i))); %assert(all(~sum(A)));
+      end
+    end
+end
+
 
 end

@@ -1,4 +1,6 @@
 function [tr_hit,tr_miss] = tr_rep(ss,gs,gp)
+% choice of individual trials to display
+% of each group size, group protocol, and shelter capacity
 
 if ss==50
    if gs==5 

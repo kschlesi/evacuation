@@ -1,41 +1,23 @@
 %%% script for running things with evacuation data
 
 % load_evac_data 
-bins = -0.05:0.1:1.05;  % this gives the bin EDGES
+bins = 0:0.1:1.1;
+%bins = -0.05:0.1:1.05;  % this gives the bin EDGES
 trials = [19,28,29,49,64,67,76,102,108,112,113,123,125,130,143,144];
 [H,J,Theta,AvgCumEvac,missing,Q1,T1,P1,C1] = load_evac_data(0,trials,bins);
-[ntrials,nts] = size(Q1);
+[ntrials,n_ts] = size(Q1);
 [N,~] = size(P1);
 
-% functionalities:
-% try leaving out 0
-%H = H(:,2:end); J = J(:,2:end);
 %% we can (a) fit experimental data to a particular q function 
 % with maximum likelihood estimation
+
+Phit = 0:0.1:1;
 % qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
-% Phit = 0:0.1:1;
-% qfit = @(pv_) qform(Phit(:,2:end),pv_);
-% MLfit = @(pvec) -1*sum(((sum(H(:,2:end))-sum(J(:,2:end))).*log(1-qfit(pvec)) + sum(J(:,2:end)).*log(qfit(pvec))));
 % startp = [1;0.5;10];
 qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
-Phit = 0:0.1:1;
-qfit = @(pv_) qform(Phit(:,2:end-1),pv_);
-MLfit = @(pvec_) -1*sum(((sum(H(:,2:end-1))-sum(J(:,2:end-1))).*log(1-qfit(pvec_)) + sum(J(:,2:end-1)).*log(qfit(pvec_))));
-startp = [1.1;1];
-options = optimoptions(@fminunc,'MaxFunEvals',10000);
-[params1,MLval] = fminunc(MLfit,startp,options);
-A = zeros(length(startp));
-b = zeros(length(startp),1);
-% constrains all prob. as a function of Phit to be <=1
-q_con = @(pvec_)(qform(Phit,pvec_)-1); 
-[theta_con,MLval_con] = fmincon(MLfit,startp,A,b,A,b,0,100,@(pvec_)q_add_eq(pvec_,q_con));
-
-
-if MLval<MLval_con && all(qform(0:0.1:1,params1)<=1)
-    params = params1;
-else
-    params = theta_con;
-end
+%startp = [1.1,1];
+startp = [0.8;10];
+params = ML_fit_beta(qform,Phit(:,2:end),H(:,2:end),J(:,2:end),startp);
 
 figure(1); hold all; plot(Phit,qform(Phit,params));
 xlabel('Phit'); ylabel('evacuation probability'); title('best-fit hill model, ind. trials, shelterSpace=50');
@@ -59,25 +41,8 @@ trials = unique([trial_ix('mR',50,5,missing);...
             trial_ix('mR',50,25,missing)])';
         
 [H,J,~,~,~,Q1] = load_evac_data(0,trials,bins);
-qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
-Phit = 0:0.1:1;
-qfit = @(pv_) qform(Phit(:,2:end-1),pv_);
-MLfit = @(pvec_) -1*sum(((sum(H(:,2:end-1))-sum(J(:,2:end-1))).*log(1-qfit(pvec_)) + sum(J(:,2:end-1)).*log(qfit(pvec_))));
 startp = params;
-options = optimoptions(@fminunc,'MaxFunEvals',10000);
-[params1,MLval] = fminunc(MLfit,startp,options);
-A = zeros(length(startp));
-b = zeros(length(startp),1);
-% constrains all prob. as a function of Phit to be <=1
-q_con = @(pvec_)(qform(Phit,pvec_)-1); 
-[theta_con,MLval_con] = fmincon(MLfit,startp,A,b,A,b,0,100,@(pvec_)q_add_eq(pvec_,q_con));
-
-
-if MLval<MLval_con && all(qform(0:0.1:1,params1)<=1)
-    params = params1;
-else
-    params = theta_con;
-end
+params = ML_fit_beta(qform,Phit(:,2:end-1),H(:,2:end-1),J(:,2:end-1),startp);
 
 figure(1); hold all; plot(Phit,qform(Phit,params),'--');
 xlabel('Phit'); ylabel('evacuation probability'); title('best-fit hill model, ind. trials, shelterSpace=50');
@@ -210,10 +175,7 @@ end
 %% fit for STATIC OPTIMAL behavior
 % for a given set of trials ('trials')
 [Qu,trials] = unique_rows(Q1);
-lossmat = @(didHit,didEvac) 10*(didHit.*~didEvac) + ...
-                             6*(didHit.*didEvac) + ...
-                             0*(~didHit.*~didEvac) + ...
-                             2*(~didHit.*didEvac) ;
+lossmat = loss_matrix(6,10,2,0);
 %qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
 qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
 Phit = 0:0.1:1; %Phit = Phit(2:end);
@@ -313,13 +275,7 @@ title(['Static Optimal Evacuation Strategy (Hill Model), <score> = ' num2str(sop
 % this updates in the order that trials were presented. use ALL trials.
 trials = 1:1:size(Q1,1); trials = trials(:)';
 %trials = [19,28,29,49,64,67,76,102,108,112,113,123,125,130,143,144];
-
-% loss matrix used to evaluate strategies
-lossmat = @(didHit,didEvac) 10*(didHit.*~didEvac) + ...
-                             6*(didHit.*didEvac) + ...
-                             0*(~didHit.*~didEvac) + ...
-                             2*(~didHit.*didEvac) ;
-                         
+                       
 % decision model, fcn of Phit and parameters to fit
 qhill = @(Phit_,L_,k_,n_) L_.*(Phit_.^n_)./(k_.^n_+Phit_.^n_);
 Phit = 0:0.1:1; % list of Phits at which q will be evaluated
@@ -359,7 +315,7 @@ L_maxscore = zeros(nL,nk,nn);           % likelihood of achieving max score
 for L=Lrange
   for k=krange
     for n=nrange
-          [~,pEvac] = exp_score(qhill,[L,k,n],Phit,Q1(tr,:),lossmat);  
+          [~,pEvac] = exp_score(qhill,[L,k,n],Phit,Q1(tr,:),loss_matrix);  
           if didHit % likelihood = pEvac
               L_maxscore(Lrange==L,krange==k,nrange==n) = pEvac;
           else      % likelihood = (1-pEvac)
@@ -538,7 +494,7 @@ p = 100;  % number of times to simulate
 
 % train model on individual trials (output 'params')
 trials = trial_ix('ind',shelterSpace,1,missing);
-bins = -0.05:0.1:1.05; [H,J,~,~,~,Q1] = load_evac_data(0,trials,bins); nts = size(Q1,2);
+bins = -0.05:0.1:1.05; [H,J,~,~,~,Q1] = load_evac_data(0,trials,bins); n_ts = size(Q1,2);
 % qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
 % Phit = 0:0.1:1;
 % qfit = @(pv_) qform(Phit(:,2:end),pv_);
@@ -566,7 +522,7 @@ for j = 1:size(Q1,1) % iterate through each trial
     trEnd(j) = find(Q1(j,:)==Q1(j,end),1,'first');
 end
 nevac_b = zeros(numel(trials),1);
-nevac_t = zeros(numel(trials),nts);
+nevac_t = zeros(numel(trials),n_ts);
 for tr = trials(:)'
     % randomly generate N individual evac times, p simulations
     % for comments see similar section above

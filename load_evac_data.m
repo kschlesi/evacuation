@@ -30,7 +30,7 @@ load('evacuate_data.mat');
 % import experiment PHIT Values
 Q1 = gameinfo;
 [ntrials, nts] = size(Q1); % row numbers = trial number, column numbers = time (1:1:60)
-%%%%Q1(:,1) = 0.5;  % DO NOT manually fix initial Phit = 0.5 on all trials
+Q1([30,74,121],38:end) = 1.0;  %% FIX mistake in certain hit trials
 assert(nts==length(tvec));
 
 % import experiment Time at which individual evacuated
@@ -101,7 +101,7 @@ Qm = Q1(indx,:);
 
 % This is how the PHIT Trajectroy was scaled during the experiment
 if nargin<2
-    bins = 0:0.1:1.1; %% this is now incorrect! this rounds DOWN
+    bins = 0:0.1:1.1; %% this rounds DOWN
     %bins = -0.05:0.1:1.05; %% this rounds to NEAREST
 end
 
