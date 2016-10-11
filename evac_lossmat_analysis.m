@@ -28,6 +28,19 @@ params = ML_fit_beta(qform,Phit(2:end-1),H(:,2:end-1),J(:,2:end-1),startp);
 [e_score,e_trscore] = total_score(qform,params,Phit,trials,Q1,loss_matrix);
 
 %% Determine range of test loss matrices to use.
+
+rho_a_list = 0:0.1:1;
+rho_b_list = 0:0.1:1;
+[ra,rb] = meshgrid(rho_a_list,rho_b_list);
+helist = ra.*10;
+melist = ra.*10.*rb./(1+rb);
+
+figure; bcolor([helist(:),melist(:)]);
+        title('Losses for Each Test Case');
+        set(gca,'XTickLabel',{'Hit/Evac','Miss/Evac'});
+        set(gca,'YTick',[]);
+        colorbar;
+
 %% Compute expected score from each test matrix.
 
 % rho_a = all assets as percentage of span (range: 0:1)
@@ -35,8 +48,6 @@ params = ML_fit_beta(qform,Phit(2:end-1),H(:,2:end-1),J(:,2:end-1),startp);
 % original loss matrix: he = 6, hn = 10, me = 2, mn = 0
 %                       rho_a = 0.6, rho_b = 0.5
 
-rho_a_list = 0:0.1:1;
-rho_b_list = 0:0.1:1;
 t_scores = zeros(numel(rho_a_list),numel(rho_b_list));
 t_trscores = zeros(numel(rho_a_list),numel(rho_b_list),numel(trials));
 for rho_a = rho_a_list
@@ -49,9 +60,22 @@ for rho_a = rho_a_list
   end
 end
 
-%% Compute 
+%% Compute static optimal strategy and expected score for each test matrix.
+
+o_strat = zeros(numel(rho_a_list),numel(rho_b_list));
+o_param = zeros(numel(rho_a_list),numel(rho_b_list),numel(trials));
+for rho_a = rho_a_list
+  for rho_b = rho_b_list
+    disp(['rho_a = ' num2str(rho_a) ', rho_b = ' num2str(rho_b)]);
+    [t_score,t_trscore] = total_score(qform,params,Phit,trials,Q1,...
+                                      loss_matrix_unitless(rho_a,rho_b));
+    o_strat(rho_a_list==rho_a,rho_b_list==rho_b) = t_score;
+    o_param(rho_a_list==rho_a,rho_b_list==rho_b,:) = shiftdim(t_trscore,-2);
+  end
+end
 
 %% Figure
 
 figure; bcolor(t_scores,rho_a_list,rho_b_list); 
         colorbar;
+        ylabel('Hit/Evac Losses'); ylabel('Hit/Evac Losses');

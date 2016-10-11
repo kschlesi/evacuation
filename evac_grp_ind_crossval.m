@@ -45,29 +45,12 @@ end
 % with maximum likelihood estimation
 
 % qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
-% Phit = 0:0.1:1;
-% qfit = @(pv_) qform(Phit(:,2:end),pv_);
-% MLfit = @(pvec) -1*sum(((sum(H(:,2:end))-sum(J(:,2:end))).*log(1-qfit(pvec)) + sum(J(:,2:end)).*log(qfit(pvec))));
 % startp = [1;0.5;10];
 
 qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2);
-Phit = 0:0.1:1;
-qfit = @(pv_) qform(Phit(:,2:end-1),pv_);
-MLfit = @(pvec_) -1*sum(((sum(Htrain(:,2:end-1))-sum(Jtrain(:,2:end-1))).*log(1-qfit(pvec_)) + sum(Jtrain(:,2:end-1)).*log(qfit(pvec_))));
 startp = [1.1;1];
-options = optimoptions(@fminunc,'MaxFunEvals',10000);
-[params1,MLval] = fminunc(MLfit,startp,options);
-A = zeros(length(startp));
-b = zeros(length(startp),1);
-% constrains all prob. as a function of Phit to be <=1
-q_con = @(pvec_)(qform(Phit,pvec_)-1); 
-[theta_con,MLval_con] = fmincon(MLfit,startp,A,b,A,b,0,100,@(pvec_)q_add_eq(pvec_,q_con));
-
-if MLval<MLval_con && all(qform(0:0.1:1,params1)<=1)
-    params = params1;
-else
-    params = theta_con;
-end
+Phit = 0:0.1:1;
+params = ML_fit_beta(qform,Phit(:,2:end-1),H(:,2:end-1),J(:,2:end-1),startp);
 
 if makeFigs
 figure(1); hold all; plot(Phit,qform(Phit,params));
@@ -84,7 +67,7 @@ q = @(Phit_) qform(Phit_,params);              % model with params to test
 tot_err = zeros(numel(test_trials),1);
 ts_err = zeros(numel(test_trials),nts);
 %loop over test trials
-for tr=test_trials';
+for tr=test_trials'
 disp(['test trial ' num2str(tr)]);
 [T, P] = solve_master_binom_ss(N,q,Q1(tr,:),Phit,'ss',ss);
 Cexp = sum(bsxfun(@times,P,0:1:N),2);
@@ -201,7 +184,7 @@ figure(2); hold all;
             end  
           end
           
-%figure; %bcolor(P',T,0:1:N); colorbar; hold all; % probability distribution
+    % make figure
         plot(T,Cexp,'k','LineWidth',2); hold all;  % expected value
         plot(tbins,C1(tr,:),'color',[0 0.5 0],'LineWidth',2);                         % empirical value
         plot(tbins,N*(floor((Q1(tr,:))*10)/10),'--','LineWidth',1);                 % Phit value
@@ -226,7 +209,6 @@ RMSEs = rmse(ts_err');
 
 %% MAKE SUMMARY PLOTS
 
-
 % for a particular shelter capacity
 ss_list = 25;
 for ss = ss_list;
@@ -236,7 +218,7 @@ sizes = sizes(sizes<=ss);
 tbins = 0:1:nts-1;
 for groupSize = sizes;
     gix = find(sizes==groupSize);
-  for tp=[1,2];  
+  for tp=[1,2]
     if tp==1
         strg = 'Naive Cross-validation Error';
         load(['ind_grp_crossval_ss' num2str(ss) 't.mat']); % t suffix = crossval; s suffix = sims
