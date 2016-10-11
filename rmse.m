@@ -22,6 +22,6 @@ if length(pred)==numel(pred)
     pred = pred(:);
 end
 
-err = sqrt(mean(((tru-pred).^2)));
+err = sqrt(nanmean(((tru-pred).^2)));
 
 end
