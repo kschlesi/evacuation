@@ -1,25 +1,23 @@
-%%%% Bayesian Learner of evacuation game.
+%%%% Bayesian Learner of evacuation game, for arbitrary decision strategy
+%%%% form (powerlaw, hill function, etc.)
 
 %% First, load data.
  
-bins = -0.05:0.1:1.05;  % this gives the bin EDGES
+bins = 0:0.1:1.1;  % this gives the bin EDGES (rounding DOWN)
 trials = 1:160;
 [H,J,Theta,AvgCumEvac,missing,Q1,T1,P1,C1] = load_evac_data(0,trials,bins);
-[ntrials,nts] = size(Q1);
+[ntrials,n_ts] = size(Q1);
 [N,~] = size(P1);
 
 %% Next, create simple Bayesian learner.
 % this updates in the order that trials were presented. use ALL trials.
 trials = 1:1:ntrials; trials = trials(:)';
-trials = 1:2; %************************************************************************
+
 % loss matrix used to evaluate strategies
-lossmat = @(didHit_,didEvac_) 10*(didHit_.*~didEvac_) + ...
-                             6*(didHit_.*didEvac_) + ...
-                             0*(~didHit_.*~didEvac_) + ...
-                             2*(~didHit_.*didEvac_) ;
+lossmat = loss_matrix(6,10,2,0);
                          
 % decision model, fcn of Phit and parameters to fit
-params = [1.0000;6.6423];                   % best fit params for powerlaw
+params = [1.0000;6.6423];                   % best fit params for powerlaw %%%%%%FIX
 qform = @(Phit_,pv_) pv_(1).*Phit_.^pv_(2); % functional form of powerlaw
 % qform = @(Phit_,pv_) pv_(1).*(Phit_.^pv_(3))./(pv_(2).^pv_(3)+Phit_.^pv_(3));
 Phit = 0:0.1:1; % list of Phits at which q will be evaluated
@@ -117,7 +115,7 @@ A.opt_params = opt_params;
 A.opt_strategies = strategies;
 A.likelihoods = likes;
 
-save('bayesian_pl_ss50_ind_fine_err-7-8.mat','A');
+%save('bayesian_pl_ss50_ind_fine_err-7-8.mat','A');
 
 %% Now, allow this Bayesian learner to take into account shelter space.
 % what this means is that she will evaluate her own probability of
@@ -172,18 +170,18 @@ for px = 1:prod(psize)                     % choose one param combination
       prob(1,pix{:}) = 0;
       n_con = n_con+1;
     end
-    Apar = makeA(N,qform(Phit,par)); % create A-mat for this strategy & ss
-    if ss<N     % update A-mat to disallow too many evacuations to shelter
-      for i=1:length(Phit)
-        % zero blocked transitions and transfer probabilities to allowed ones
-        Apar(ss+1,:,i) = Apar(ss+1,:,i) + sum(Apar(ss+2:end,:,i));
-        Apar(ss+2:end,:,i) = 0; 
-        Apar(:,ss+2:end,i) = 0;
-        % zero and re-compute diagonal
-        Apar(:,:,i) = Apar(:,:,i).*(~eye(size(Apar(:,:,i)))); assert(all(~diag(Apar(:,:,i))));
-        Apar(:,:,i) = Apar(:,:,i) - diag(sum(Apar(:,:,i))); %assert(all(~sum(A)));
-      end
-    end
+    Apar = makeA(N,qform(Phit,par),ss); % create A-mat for this strategy & ss
+%     if ss<N     % update A-mat to disallow too many evacuations to shelter
+%       for i=1:length(Phit)
+%         zero blocked transitions and transfer probabilities to allowed ones
+%         Apar(ss+1,:,i) = Apar(ss+1,:,i) + sum(Apar(ss+2:end,:,i));
+%         Apar(ss+2:end,:,i) = 0; 
+%         Apar(:,ss+2:end,i) = 0;
+%         zero and re-compute diagonal
+%         Apar(:,:,i) = Apar(:,:,i).*(~eye(size(Apar(:,:,i)))); assert(all(~diag(Apar(:,:,i))));
+%         Apar(:,:,i) = Apar(:,:,i) - diag(sum(Apar(:,:,i))); %assert(all(~sum(A)));
+%       end
+%     end
     A_bloc(:,:,:,pix{:}) = Apar;
 end
 maxprob(1) = 1/(prod(psize)-n_con);     % set initial normalized max prob.
@@ -324,10 +322,7 @@ figure; plot(pe5.*mmask,'or'); hold on; plot(pe5.*hmask,'*r');
 % title('No-Evacuate Disaster Hits for Bayesian Optimal Player');
 
 %% comparison plots to actual behavior
-lossmat = @(didHit_,didEvac_) 10*(didHit_.*~didEvac_) + ...
-                               6*(didHit_.*didEvac_) + ...
-                               0*(~didHit_.*~didEvac_) + ...
-                               2*(~didHit_.*didEvac_) ;
+lossmat = loss_matrix(6,10,2,0);
 didHit = Q1(:,end);
 all_pEvac = C1(:,end)./N;
 all_scr = -1*(lossmat(didHit,1).*all_pEvac + lossmat(didHit,0).*(1-all_pEvac));

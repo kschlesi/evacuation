@@ -1,3 +1,8 @@
+
+%% NOTE: This code is old (fits only for hill function) and an updated 
+%% version can be found in bayesian_new
+%%
+
 %%%% Bayesian Learner of evacuation game.
 
 %% First, load data.

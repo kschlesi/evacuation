@@ -1,4 +1,5 @@
 %%% script for running things with evacuation data
+addpath(genpath(pwd));
 
 % load_evac_data 
 bins = 0:0.1:1.1;

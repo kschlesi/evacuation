@@ -7,10 +7,7 @@ Q1 = gameinfo;
 [ntrials,~] = size(Q1);
 trials = 1:1:ntrials;
 N = 50;
-lossmat = @(didHit_,didEvac_) 10*(didHit_.*~didEvac_) + ...
-                              6*(didHit_.*didEvac_) + ...                           
-                              0*(~didHit_.*~didEvac_) + ...
-                              2*(~didHit_.*didEvac_) ;
+lossmat = loss_matrix(6,10,2,0);
                           
 % compute likelihoods for this tr and ss
 disp(['trial ' num2str(tr) ', ' num2str(find(trials==tr)) ' of ' num2str(numel(trials))]);
