@@ -31,18 +31,18 @@ for ss=ss_list
     for px=1:prod(psize)
     pix = ind2sub_var_dim(psize,px,1);     % give the dimensional indices
     par = index_each_cell(prange,pix);     % give corresponding param val
-    Apar = makeA(N,qform(Phit,par)); % create A-mat for this strategy & ss
-    if ss<N     % update A-mat to disallow too many evacuations to shelter
-      for i=1:length(Phit)
-        % zero blocked transitions and transfer probabilities to allowed ones
-        Apar(ss+1,:,i) = Apar(ss+1,:,i) + sum(Apar(ss+2:end,:,i));
-        Apar(ss+2:end,:,i) = 0; 
-        Apar(:,ss+2:end,i) = 0;
-        % zero and re-compute diagonal
-        Apar(:,:,i) = Apar(:,:,i).*(~eye(size(Apar(:,:,i)))); assert(all(~diag(Apar(:,:,i))));
-        Apar(:,:,i) = Apar(:,:,i) - diag(sum(Apar(:,:,i))); %assert(all(~sum(A)));
-      end
-    end
+    Apar = makeA(N,qform(Phit,par),ss); % create A-mat for this strategy & ss
+%     if ss<N     % update A-mat to disallow too many evacuations to shelter
+%       for i=1:length(Phit)
+%         % zero blocked transitions and transfer probabilities to allowed ones
+%         Apar(ss+1,:,i) = Apar(ss+1,:,i) + sum(Apar(ss+2:end,:,i));
+%         Apar(ss+2:end,:,i) = 0; 
+%         Apar(:,ss+2:end,i) = 0;
+%         % zero and re-compute diagonal
+%         Apar(:,:,i) = Apar(:,:,i).*(~eye(size(Apar(:,:,i)))); assert(all(~diag(Apar(:,:,i))));
+%         Apar(:,:,i) = Apar(:,:,i) - diag(sum(Apar(:,:,i))); %assert(all(~sum(A)));
+%       end
+%     end
     eval(['A_bloc' num2str(ss) '(:,:,:,pix{:}) = Apar;']);
     end 
 end
