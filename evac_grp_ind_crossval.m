@@ -1,4 +1,8 @@
-%% CROSS-VALIDATION 
+%% Comparing Group to Individual behavior w CROSS-VALIDATION and SIMULATION
+% this code generates parts A, B, and C of group-individual comparison
+% figures in decision modelling paper
+%cd kimberly/Documents/evacuation
+addpath(genpath(pwd));
 
 %% set training and holdout trials; set shelter space
 
@@ -7,7 +11,7 @@ ss = 50;
 train_trials = trial_ix('ind',ss,1,missing);
 
 makeFigs = true;  % allows any figures
-sumFigs = false;  % overrides full plots to make plots with ONE example trial for each hit/miss
+sumFigs = true;  % overrides full plots to make plots with ONE example trial for each hit/miss
                   % NOTE if sumFigs = false && makeFigs = true, plots
                   % will be made with ALL trials included
 makeFigs_fit = false; % plots individual best fit model strategy
@@ -227,7 +231,7 @@ end
 
 %% make RMSE plot for a particular ss and groupSize
 
-ss = 25;
+ss = 50;
 gSs = [5,25];
 gPs = {'fTG','lTG','mR'};
 nextNo = next_fig;
