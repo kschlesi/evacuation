@@ -29,3 +29,10 @@ analysis on the cluster:
                             likelihoods from parallel computation
 			    into bayesian posterior distributions)
 
+Sub-directories include:
+ - Evac_Utils : collection of utility functions specific to this
+                evacuation project
+ - MATLAB : collection of utility functions usable more broadly
+ - Old_Code : self-explanatory
+ - Old_Data : other versions/formats of data in main directory
+ - other directories of figures and results ignored by git
