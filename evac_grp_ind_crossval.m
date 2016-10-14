@@ -165,20 +165,40 @@ for groupSize = gSs
             makeLeg = fig_format_sum(tr,Q1(tr,end),tr_hit,tr_miss,gPs,groupProtocol);
         end  
 
+        % make plot (Chantal)
+            hold on
+            area(tbins,evac(:,plotInd),'FaceColor',[192/255 192/255 192/255]);
+            set(gca,'Layer','top')    
+            confinterval=shadedErrorBar(0:trEnd(tr),meanProbs{plotInd},3*stdevs{plotInd},{'color','k','LineWidth',5,'LineStyle',':'},1);
+            set(confinterval.edge(1),'visible','off')
+            set(confinterval.edge(2),'visible','off')
+            [ax,crossval,phits]=plotyy(1:60,P_cv(:,plotInd),1:60,rP_hits(:,plotInd));
+            set(phits,'color',[0 1 0]); set(phits,'LineWidth',1); set(phits,'LineStyle','-');
+            set(crossval,'color',[0 1 1 0.4]); set(crossval,'LineWidth',5);
+            set(ax(1),'box','on')
+            set(ax(2),'YColor','g')
+            ax(1).YTick = 0:10:50; ax(2).YTick = 0:0.2:1;
+            ax(1).YColor = 'k';
+            ax(1).YLim = [0 50]; ax(2).YLim = [0 1];
+            ax(1).XLim = [1 endTimes(plotInd)]; ax(2).XLim = [1 endTimes(plotInd)];
+            ax(1).FontSize = 11; ax(2).FontSize = 11;
+            title(['Trial ' trial_type '-' num2str(plotInd)],'FontSize',14)
+        
+        
         % make plot
-            plot(tbins,N*(floor((Q1(tr,:))*10)/10),'--','LineWidth',1); hold all;% Phit value
-            plot(tbins,C1(tr,:),'color','k','LineWidth',2);  % empirical value
-            plot(T,Cexp,'color',[0.5 0 0.5],'LineWidth',2); % expected value
-            plot(tbins_sim,mean(Cbin,2),'color',[0 0.5 0],'LineWidth',2);
-            confinterval=shadedErrorBar_2(T,Cexp,stdevs,{'color',[0.5 0 0.5],'LineWidth',2},1);
-            set(confinterval.edge(1),'visible','off');
-            set(confinterval.edge(2),'visible','off');
-            for i=1:10%p
-                    plot([0;tgrp(:,i)],[0;Cgrp(:,i)],':','LineWidth',1); 
-                    %plot(t_mat(r_mat(:,i)~=0,i),ix(r_mat(r_mat(:,i)~=0,i))-1,':o'); hold all;
-            end
-            xlabel('time'); ylabel('# evacuated'); title(['trial ' num2str(tr) ', ' gpstr]);
-            axis([0 n_ts 0 N]);
+%             plot(tbins,N*(floor((Q1(tr,:))*10)/10),'--','LineWidth',1); hold all;% Phit value
+%             plot(tbins,C1(tr,:),'color','k','LineWidth',2);  % empirical value
+%             plot(T,Cexp,'color',[0.5 0 0.5],'LineWidth',2); % expected value
+%             plot(tbins_sim,mean(Cbin,2),'color',[0 0.5 0],'LineWidth',2);
+%             confinterval=shadedErrorBar_2(T,Cexp,stdevs,{'color',[0.5 0 0.5],'LineWidth',2},1);
+%             set(confinterval.edge(1),'visible','off');
+%             set(confinterval.edge(2),'visible','off');
+%             for i=1:10%p
+%                     plot([0;tgrp(:,i)],[0;Cgrp(:,i)],':','LineWidth',1); 
+%                     %plot(t_mat(r_mat(:,i)~=0,i),ix(r_mat(r_mat(:,i)~=0,i))-1,':o'); hold all;
+%             end
+%             xlabel('time'); ylabel('# evacuated'); title(['trial ' num2str(tr) ', ' gpstr]);
+%             axis([0 n_ts 0 N]);
             if makeLeg
                 legend('disaster trajectory','empirical group behavior','expected naive cross-val behavior',...%'95% confidence',
                        'mean simulated behavior');%,'example simulation instances');
