@@ -6,7 +6,7 @@ addpath(genpath(pwd));
 
 %% set training and holdout trials; set shelter space
 
-ss = 50;
+ss = 25;
 [~,~,~,~,missing] = load_evac_data(0);
 train_trials = trial_ix('ind',ss,1,missing);
 
@@ -231,7 +231,7 @@ end
 
 %% make RMSE plot for a particular ss and groupSize
 
-ss = 50;
+ss = 25;
 gSs = [5,25];
 gPs = {'fTG','lTG','mR'};
 nextNo = next_fig;
@@ -243,7 +243,7 @@ add_ind_1 = false;
 for groupSize = gSs
 prots = {'ftg','ltg','mv'};
 load(['ind_grp_errs_ss' num2str(ss) 't.mat']);
-if add_ind
+if add_ind  % includes an individual-game bar
     load(['ind_errs_ss' num2str(ss) 't.mat']);
 end
                   
@@ -300,7 +300,7 @@ end
 %% summary error figures....
 
 % for a particular shelter capacity
-ss = 50;
+ss = 25;
 
 gSs = [5,25];
 tbins = 0:1:n_ts-1;
@@ -310,20 +310,26 @@ for groupSize = gSs;
 
         strg1 = 'Naive Cross-validation Error';
         strg2 = 'Grouped Individual Simulation Error';
-        load(['ind_grp_crossval_ss' num2str(ss) 't.mat']); % t suffix = crossval; s suffix = sims
-  figure;
+        load(['IndGrp_Results/ind_grp_crossval_ss' num2str(ss) 't.mat']); % t suffix = crossval; s suffix = sims
+  figure(nextNo);
     subplot(2,1,1);
-    eval(['plot(tbins,mean(tse_ftg' num2str(groupSize) ')'',''b'',''LineWidth'',2);']); hold all;
-    eval(['plot(tbins,mean(tse_ltg' num2str(groupSize) ')'',''m'',''LineWidth'',2);']); 
+    eval(['plot(tbins,nanmean(tse_ftg' num2str(groupSize) ')'',''b'',''LineWidth'',2);']); hold all;
+    eval(['plot(tbins,nanmean(tse_ltg' num2str(groupSize) ')'',''m'',''LineWidth'',2);']); 
     eval(['tsmr=tse_mv' num2str(groupSize) ';']);
     if numel(tsmr)==length(tsmr)
       eval(['plot(tbins,tse_mv' num2str(groupSize) ''',''g'',''LineWidth'',2);']);
     else
-      eval(['plot(tbins,mean(tse_mv' num2str(groupSize) ')'',''g'',''LineWidth'',2);']);
+      eval(['plot(tbins,nanmean(tse_mv' num2str(groupSize) ')'',''g'',''LineWidth'',2);']);
     end
     eval(['plot(tbins,tse_ftg' num2str(groupSize) ''',''b:'');']); hold all;
     eval(['plot(tbins,tse_ltg' num2str(groupSize) ''',''m:'');']); 
     eval(['plot(tbins,tse_mv' num2str(groupSize) ''',''g:'');']);
+    eval(['shdF = shadedErrorBar(tbins,nanmean(tse_ftg' num2str(groupSize) ',1),nanstd(tse_ftg' num2str(groupSize) ',0,1),{''color'',''b''},1,1);']);
+    set(shdF.edge(1),'visible','off'); set(shdF.edge(2),'visible','off');
+    eval(['shdL = shadedErrorBar(tbins,nanmean(tse_ltg' num2str(groupSize) ',1),nanstd(tse_ltg' num2str(groupSize) ',0,1),{''color'',''m''},1,1);']);
+    set(shdL.edge(1),'visible','off'); set(shdL.edge(2),'visible','off');
+    eval(['shdM = shadedErrorBar(tbins,nanmean(tse_mv' num2str(groupSize) ',1),nanstd(tse_mv' num2str(groupSize) ',0,1),{''color'',''g''},1,1);']);
+    set(shdM.edge(1),'visible','off'); set(shdM.edge(2),'visible','off');
     xlabel('time step'); ylabel('prediction error in total evacuations');
     legend('FTG','LTG','MV'); axis([0 n_ts -ss ss]);
     %title(['shelter capacity ' num2str(ss) ', group size ' num2str(groupSize)]);
@@ -341,6 +347,12 @@ for groupSize = gSs;
     eval(['plot(tbins,tse_ftg' num2str(groupSize) 's'',''b:'');']); hold all;
     eval(['plot(tbins,tse_ltg' num2str(groupSize) 's'',''m:'');']); 
     eval(['plot(tbins,tse_mv' num2str(groupSize) 's'',''g:'');']);
+    eval(['shdFs = shadedErrorBar(tbins,nanmean(tse_ftg' num2str(groupSize) 's,1),nanstd(tse_ftg' num2str(groupSize) 's,0,1),{''color'',''b''},1,1);']);
+    set(shdFs.edge(1),'visible','off'); set(shdFs.edge(2),'visible','off');
+    eval(['shdLs = shadedErrorBar(tbins,nanmean(tse_ltg' num2str(groupSize) 's,1),nanstd(tse_ltg' num2str(groupSize) 's,0,1),{''color'',''m''},1,1);']);
+    set(shdLs.edge(1),'visible','off'); set(shdLs.edge(2),'visible','off');
+    eval(['shdMs = shadedErrorBar(tbins,nanmean(tse_mv' num2str(groupSize) 's,1),nanstd(tse_mv' num2str(groupSize) 's,0,1),{''color'',''g''},1,1);']);
+    set(shdMs.edge(1),'visible','off'); set(shdMs.edge(2),'visible','off');
     xlabel('time step'); ylabel('prediction error in total evacuations');
     legend('FTG','LTG','MV'); axis([0 n_ts -ss ss]);
     %title(['shelter capacity ' num2str(ss) ', group size ' num2str(groupSize)]);
