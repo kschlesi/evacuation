@@ -169,20 +169,20 @@ for groupSize = gSs
             hold on
             area(tbins,evac(:,plotInd),'FaceColor',[192/255 192/255 192/255]);
             set(gca,'Layer','top')    
-            confinterval=shadedErrorBar(0:trEnd(tr),meanProbs{plotInd},3*stdevs{plotInd},{'color','k','LineWidth',5,'LineStyle',':'},1);
+            confinterval=shadedErrorBar(T,Cexp,stdevs,{'color','k','LineWidth',5,'LineStyle',':'},1);
             set(confinterval.edge(1),'visible','off')
             set(confinterval.edge(2),'visible','off')
-            [ax,crossval,phits]=plotyy(1:60,P_cv(:,plotInd),1:60,rP_hits(:,plotInd));
+            [ax,crossval,phits]=plotyy(tbins,C1(tr,:),tbins,N*(floor((Q1(tr,:))*10)/10));
             set(phits,'color',[0 1 0]); set(phits,'LineWidth',1); set(phits,'LineStyle','-');
             set(crossval,'color',[0 1 1 0.4]); set(crossval,'LineWidth',5);
             set(ax(1),'box','on')
             set(ax(2),'YColor','g')
-            ax(1).YTick = 0:10:50; ax(2).YTick = 0:0.2:1;
+            ax(1).YTick = 0:10:N; ax(2).YTick = 0:0.2:1;
             ax(1).YColor = 'k';
-            ax(1).YLim = [0 50]; ax(2).YLim = [0 1];
-            ax(1).XLim = [1 endTimes(plotInd)]; ax(2).XLim = [1 endTimes(plotInd)];
+            ax(1).YLim = [0 N]; ax(2).YLim = [0 1];
+            ax(1).XLim = [1 trEnd(tr)]; ax(2).XLim = [1 trEnd(tr)];
             ax(1).FontSize = 11; ax(2).FontSize = 11;
-            title(['Trial ' trial_type '-' num2str(plotInd)],'FontSize',14)
+            %title(['Trial ' trial_type '-' num2str(plotInd)],'FontSize',14)
         
         
         % make plot
