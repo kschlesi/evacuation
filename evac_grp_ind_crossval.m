@@ -15,15 +15,25 @@ sumFigs = true;  % overrides full plots to make plots with ONE example trial for
                   % NOTE if sumFigs = false && makeFigs = true, plots
                   % will be made with ALL trials included
 makeFigs_fit = false; % plots individual best fit model strategy
-toSave = false;   % if toSave = true, ALL simulations will be run and all errors saved
+toSave = true;   % if toSave = true, ALL simulations will be run and all errors saved
+toSave_sim = false; % if this is true, 
 
 % for cross-validation on group trials:
 gPs = {'fTG','lTG','mR'};
 gSs = [5,25];
 
 % set parameters for sims
-p = 100;
+p = 1000;
 shelterSpace = ss;
+
+
+if toSave && toSave_sim
+    % SAVE all sim information
+    t_mats = zeros(N,p,160);
+    r_mats = zeros(N,p,160);
+    grpIDmat = zeros(p,N,160);
+    tr_count = 0;
+end
 
 % loop over group sizes and protocols
 for groupSize = gSs
@@ -143,9 +153,18 @@ for groupSize = gSs
 
         % this creates cumulative evac plots given group IDs and evac times
         [Cgrp,tgrp,Cbin] = cum_evac(t_evac,grpIDs,groupProtocol,tbins_sim,'ss',shelterSpace);
+        stdevs_sim = 3*std(Cbin,0,2);
 
         % for each relevant trial, compute nevac_t (# evacuated error at each sim timestep)
         nevac_t(test_trials==tr,1:trEnd(tr)) = mean(Cbin(2:trEnd(tr)+1,:),2)' - C1(tr,1:trEnd(tr));
+        
+          if toSave && toSave_sim
+            % SAVE all sim information
+            tr_count = tr_count+1;
+            t_mats(:,:,tr_count) = t_mat;
+            r_mats(:,:,tr_count) = r_mat;
+            grpIDmat(:,:,tr_count) = grpIDs;
+          end
     
      if makeFigs    
       
@@ -167,41 +186,36 @@ for groupSize = gSs
 
         % make plot (Chantal)
             hold on
-            area(tbins,evac(:,plotInd),'FaceColor',[192/255 192/255 192/255]);
+            cumemp=area(tbins,C1(tr,:),'FaceColor',[220/255 220/255 220/255]);
             set(gca,'Layer','top')    
-            confinterval=shadedErrorBar(T,Cexp,stdevs,{'color','k','LineWidth',5,'LineStyle',':'},1);
+            confinterval=shadedErrorBar(T,Cexp,stdevs,{'color',[0.5 0 0.5],'LineWidth',5,'LineStyle','-'},1);
             set(confinterval.edge(1),'visible','off')
             set(confinterval.edge(2),'visible','off')
-            [ax,crossval,phits]=plotyy(tbins,C1(tr,:),tbins,N*(floor((Q1(tr,:))*10)/10));
-            set(phits,'color',[0 1 0]); set(phits,'LineWidth',1); set(phits,'LineStyle','-');
-            set(crossval,'color',[0 1 1 0.4]); set(crossval,'LineWidth',5);
+            if ~sim_instances
+              confintsim=shadedErrorBar(tbins_sim,mean(Cbin,2),stdevs_sim,{'color',[0 0.5 0.8],'LineWidth',5,'LineStyle','-'},1,1);
+              set(confintsim.edge(1),'visible','off')
+              set(confintsim.edge(2),'visible','off')
+            end
+            [ax,simval,phits]=plotyy(tbins,mean(Cbin(1:end-1,:),2),tbins,(floor((Q1(tr,:))*10)/10));
+            set(phits,'color',[0 0.6 0]); set(phits,'LineWidth',1); set(phits,'LineStyle','--');
+            set(simval,'color',[0 0.5 0.8]); set(simval,'LineWidth',5);
             set(ax(1),'box','on')
-            set(ax(2),'YColor','g')
+            set(ax(2),'YColor',[0 0.6 0])
+            if sim_instances
+              for i=1:10%p
+                    plot([0;tgrp(:,i)],[0;Cgrp(:,i)],':','LineWidth',2); 
+              end
+            end
             ax(1).YTick = 0:10:N; ax(2).YTick = 0:0.2:1;
             ax(1).YColor = 'k';
             ax(1).YLim = [0 N]; ax(2).YLim = [0 1];
             ax(1).XLim = [1 trEnd(tr)]; ax(2).XLim = [1 trEnd(tr)];
             ax(1).FontSize = 11; ax(2).FontSize = 11;
-            %title(['Trial ' trial_type '-' num2str(plotInd)],'FontSize',14)
-        
-        
-        % make plot
-%             plot(tbins,N*(floor((Q1(tr,:))*10)/10),'--','LineWidth',1); hold all;% Phit value
-%             plot(tbins,C1(tr,:),'color','k','LineWidth',2);  % empirical value
-%             plot(T,Cexp,'color',[0.5 0 0.5],'LineWidth',2); % expected value
-%             plot(tbins_sim,mean(Cbin,2),'color',[0 0.5 0],'LineWidth',2);
-%             confinterval=shadedErrorBar_2(T,Cexp,stdevs,{'color',[0.5 0 0.5],'LineWidth',2},1);
-%             set(confinterval.edge(1),'visible','off');
-%             set(confinterval.edge(2),'visible','off');
-%             for i=1:10%p
-%                     plot([0;tgrp(:,i)],[0;Cgrp(:,i)],':','LineWidth',1); 
-%                     %plot(t_mat(r_mat(:,i)~=0,i),ix(r_mat(r_mat(:,i)~=0,i))-1,':o'); hold all;
-%             end
-%             xlabel('time'); ylabel('# evacuated'); title(['trial ' num2str(tr) ', ' gpstr]);
-%             axis([0 n_ts 0 N]);
+                 
             if makeLeg
-                legend('disaster trajectory','empirical group behavior','expected naive cross-val behavior',...%'95% confidence',
-                       'mean simulated behavior');%,'example simulation instances');
+                legend([phits,cumemp,confinterval.mainLine,simval],...
+                       'disaster trajectory','empirical group behavior',...
+                       'expected naive cross-val behavior','mean simulated behavior');
             end
             %suptitle(['Shelter Capacity ' num2str(ss) ', Groups of ' num2str(groupSize)]);
             title(trial_conv(tr,ss,groupSize,groupProtocol));
@@ -222,7 +236,8 @@ for groupSize = gSs
 end  % end loop over group size
 
 if toSave
-save(['ind_grp_errs_ss' num2str(ss) 't.mat'],'rmse_ftg5',...
+save(['IndGrp_Results/ind_grp_errs_ss' num2str(ss) '_' num2str(p) 't.mat'],...
+                                                 'rmse_ftg5',...
                                                  'rmse_ftg25',...
                                                  'rmse_ltg5',...
                                                  'rmse_ltg25',...
@@ -247,7 +262,17 @@ save(['ind_grp_errs_ss' num2str(ss) 't.mat'],'rmse_ftg5',...
                                                  'tse_mv5s',...
                                                  'tse_mv25s',...
                                                  '-v7.3');
+if toSave_sim     
+t_mats = t_mats(:,:,1:tr_count);
+r_mats = r_mats(:,:,1:tr_count);
+grpIDmat = grpIDmat(:,:,1:tr_count);
+save(['IndGrp_Results/ind_grp_sims_ss' num2str(ss) '_' num2str(p) 't.mat'],...
+                                                 't_mats','r_mats','grpIDmat',...
+                                                 '-v7.3');                                             
 end
+
+end
+
 
 %% make RMSE plot for a particular ss and groupSize
 
@@ -262,9 +287,9 @@ add_ind_1 = false;
 %try_labels = {sprintf('FTG LTG MV\nCV'),sprintf('FTG LTG MV\nSIM')};
 for groupSize = gSs
 prots = {'ftg','ltg','mv'};
-load(['ind_grp_errs_ss' num2str(ss) 't.mat']);
+load(['IndGrp_Results/ind_grp_errs_ss' num2str(ss) '_' num2str(p) 't.mat']);
 if add_ind  % includes an individual-game bar
-    load(['ind_errs_ss' num2str(ss) 't.mat']);
+    load(['IndGrp_Results/ind_errs_ss' num2str(ss) 't.mat']);
 end
                   
 % separate by hit/miss rmse_dat
@@ -330,7 +355,7 @@ for groupSize = gSs;
 
         strg1 = 'Naive Cross-validation Error';
         strg2 = 'Grouped Individual Simulation Error';
-        load(['IndGrp_Results/ind_grp_crossval_ss' num2str(ss) 't.mat']); % t suffix = crossval; s suffix = sims
+        load(['IndGrp_Results/ind_grp_crossval_ss' num2str(ss) '_' num2str(p) 't.mat']); % t suffix = crossval; s suffix = sims
   figure(nextNo);
     subplot(2,1,1);
     eval(['plot(tbins,nanmean(tse_ftg' num2str(groupSize) ')'',''b'',''LineWidth'',2);']); hold all;
