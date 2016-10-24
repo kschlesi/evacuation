@@ -11,11 +11,11 @@ ss = 25;
 train_trials = trial_ix('ind',ss,1,missing);
 
 makeFigs = true;  % allows any figures
-sumFigs = true;  % overrides full plots to make plots with ONE example trial for each hit/miss
+sumFigs = false;  % overrides full plots to make plots with ONE example trial for each hit/miss
                   % NOTE if sumFigs = false && makeFigs = true, plots
                   % will be made with ALL trials included
 makeFigs_fit = false; % plots individual best fit model strategy
-toSave = true;   % if toSave = true, ALL simulations will be run and all errors saved
+toSave = false;   % if toSave = true, ALL simulations will be run and all errors saved
 toSave_sim = false; % if this is true, 
 
 % for cross-validation on group trials:
@@ -200,7 +200,7 @@ for groupSize = gSs
             set(phits,'color',[0 0.6 0]); set(phits,'LineWidth',1); set(phits,'LineStyle','--');
             set(simval,'color',[0 0.5 0.8]); set(simval,'LineWidth',5);
             set(ax(1),'box','on')
-            set(ax(2),'YColor',[0 0.6 0])
+            set(ax(2),'YColor',[0 0.6 0]);
             if sim_instances
               for i=1:10%p
                     plot([0;tgrp(:,i)],[0;Cgrp(:,i)],':','LineWidth',2); 
@@ -216,6 +216,8 @@ for groupSize = gSs
                 legend([phits,cumemp,confinterval.mainLine,simval],...
                        'disaster trajectory','empirical group behavior',...
                        'expected naive cross-val behavior','mean simulated behavior');
+                set(get(ax(1), 'YLabel'), 'String', 'Number of Evacuations');
+                set(get(ax(2), 'YLabel'), 'String', 'Disaster Likelihood');
             end
             %suptitle(['Shelter Capacity ' num2str(ss) ', Groups of ' num2str(groupSize)]);
             title(trial_conv(tr,ss,groupSize,groupProtocol));
@@ -355,7 +357,7 @@ for groupSize = gSs;
 
         strg1 = 'Naive Cross-validation Error';
         strg2 = 'Grouped Individual Simulation Error';
-        load(['IndGrp_Results/ind_grp_crossval_ss' num2str(ss) '_' num2str(p) 't.mat']); % t suffix = crossval; s suffix = sims
+        load(['IndGrp_Results/ind_grp_errs_ss' num2str(ss) '_' num2str(p) 't.mat']); % t suffix = crossval; s suffix = sims
   figure(nextNo);
     subplot(2,1,1);
     eval(['plot(tbins,nanmean(tse_ftg' num2str(groupSize) ')'',''b'',''LineWidth'',2);']); hold all;
